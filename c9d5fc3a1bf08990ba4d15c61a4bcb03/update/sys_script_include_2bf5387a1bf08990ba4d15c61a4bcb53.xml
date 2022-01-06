@@ -1,0 +1,1837 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>x_opti8_itom_grafa.GrafanaAPIBackend</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>GrafanaAPIBackend</name>
+        <script><![CDATA[var GrafanaAPIBackend = Class.create();
+GrafanaAPIBackend.prototype = {
+    initialize: function() {
+    },
+	queryUIActions: function (table, sysparam, sortBy, limit, page) {
+		var returnActions = [];
+		var pageWindow = this.getPageWindow(limit, page);
+		var actionGr = new GlideRecord('sys_ui_action');
+		if (table != "") {
+			actionGr.addQuery('table', table);
+		}
+		if (sysparam != "") {
+			actionGr.addEncodedQuery(sysparam);
+		} else {
+			actionGr.addQuery('active', 'true');
+			actionGr.addQuery('client', 'false');
+		}
+		actionGr.orderBy(sortBy);
+		actionGr.setLimit(limit);
+		actionGr.chooseWindow(pageWindow[0], pageWindow[1]);
+		actionGr.query();
+		while (actionGr.next()) {
+			var action = {};
+			action.name = actionGr.getDisplayValue('name');
+			action.sys_id = actionGr.getValue('sys_id');
+			returnActions.push(action);
+		}
+		return JSON.stringify(returnActions);
+	},
+	getAlertAnomaly: function (columns, sysparam_query, sortBy, sortDirection, limit, page) {
+		var anomalyValues = [];
+		var fields = [];
+		if (columns.indexOf("|") != -1) {
+			fields = this.getValuesByNameMatch(columns, "|");
+		} else {
+			fields = this.getValuesByNameMatch(columns, ",");
+		}
+		if (columns.length == 0)
+			fields = this.getTableColumns("em_alert_anomaly");
+		
+		var pageWindow = this.getPageWindow(limit, page);
+		var anomalyGR = new GlideRecord("em_alert_anomaly");
+		anomalyGR.addEncodedQuery(sysparam_query);
+		anomalyGR.setLimit(limit);
+		anomalyGR.chooseWindow(pageWindow[0], pageWindow[1]);
+		if (sortBy != "") {
+			if (sortDirection == "ASC") {
+				anomalyGR.orderBy(sortBy);
+			} else {
+				anomalyGR.orderByDesc(sortBy);
+			}
+		}
+		anomalyGR.query();
+		while (anomalyGR.next()) {
+			var obj = {};
+			fields.map(function(field) {
+				obj[field] = anomalyGR.getDisplayValue(field);
+				if (field == "additional_info") {
+					var additional_info = JSON.parse(obj[field]);
+					for (var key in additional_info) {
+						obj[key] = additional_info[key];
+					}
+				}
+				
+				var description = anomalyGR.getDisplayValue("description");
+				obj["description.metricType"] = anomalyGR.getDisplayValue("type");
+				obj["description.metricValue"] = description.substring(description.indexOf("metric value") + 13, description.indexOf(" is"));
+				obj["description.boundary"] = description.substring(description.indexOf("boundary ") + 9, description.length);
+			});
+			anomalyValues.push(obj);
+		}
+		return JSON.stringify(anomalyValues);
+	},
+	getAllTableColumns: function (table, search) {
+		// doubleDepthSearch is an experimental feature. Currently it's not supported by Grafana's select component
+		var doubleDepthSearch = false;
+		var columnArray = [];
+		var columnGr = new GlideRecord("sys_dictionary");
+		columnGr.addQuery("name", table);
+		columnGr.addEncodedQuery("element!=NULL");
+		columnGr.addEncodedQuery("column_labelLIKE" + search);
+		columnGr.query();
+		while(columnGr.next()) {
+			var column = {};
+			column.label = columnGr.getDisplayValue("column_label");
+			column.value = columnGr.getDisplayValue("element");
+			var type = columnGr.getDisplayValue("internal_type");
+			if (type == "Reference") {
+				columnArray.push({ label: column.label, value: column.value });
+				column.options = [];
+				var referenceTable = columnGr.getValue("reference");
+				var nestedColumnGr = new GlideRecord("sys_dictionary");
+				nestedColumnGr.addQuery("name", referenceTable);
+				nestedColumnGr.addEncodedQuery("element!=NULL");
+				nestedColumnGr.query();
+				while (nestedColumnGr.next()) {
+					var nestedObj = {};
+					nestedObj.label = column.label + " => " + nestedColumnGr.getDisplayValue("column_label");
+					nestedObj.value = column.value + "." + nestedColumnGr.getDisplayValue("element");
+					var nestedType = nestedColumnGr.getDisplayValue("internal_type");
+					if (nestedType == "Reference" && doubleDepthSearch == true) {
+						nestedObj.options = [];
+						var nestedReference = nestedColumnGr.getValue("reference");
+						var doubleNestedGr = new GlideRecord("sys_dictionary");
+						doubleNestedGr.addQuery("name", nestedReference);
+						doubleNestedGr.addEncodedQuery("element!=NULL");
+						doubleNestedGr.query();
+						while (doubleNestedGr.next()) {
+							var doubleNestedObj = {};
+							doubleNestedObj.label = nestedObj.label + " => " + doubleNestedGr.getDisplayValue("column_label");
+							doubleNestedObj.value = nestedObj.value + "." + doubleNestedGr.getDisplayValue("element");
+							nestedObj.options.push(doubleNestedObj);
+						}
+					}
+					column.options.push(nestedObj);
+				}
+			}
+			columnArray.push(column);
+		}
+		return JSON.stringify(columnArray);
+	},
+	getMetricNamesFromCIs: function (ciIdMatch,type) {
+		var queryStr = "";
+		var operatingSystems = "";
+		var ciIds = this.getValuesByNameMatch(ciIdMatch, "|");
+		if(ciIds.length<=0)
+			return '[]';
+		for(c=0;c<ciIds.length;c++)
+			queryStr+=ciIds[c]+",";
+
+		if(queryStr.charAt(queryStr.length - 1)==',')
+			queryStr=queryStr.substring(0, queryStr.length - 1);
+
+		cmdbQueryStr="sys_idIN"+queryStr;
+		var cmdbGr = new GlideRecord("cmdb_ci");
+		cmdbGr.addEncodedQuery(cmdbQueryStr);
+		cmdbGr.query();
+		while (cmdbGr.next())
+			operatingSystems += cmdbGr.getValue("sys_class_name") + ",";
+
+		queryStr="^cmdb_ci.sys_idIN"+queryStr;
+		//queryStr="^cmdb_ci.nameIN"+queryStr+"^resource_idISEMPTY";
+
+		var returnMetrics = [];
+		var metricNames = [];
+		var metricToCiGr = new GlideRecord('sa_metric_map');
+		metricToCiGr.addEncodedQuery(queryStr);
+		metricToCiGr.query();
+
+		while (metricToCiGr.next()) {
+			var metric_tiny_name = metricToCiGr.metric_type_id.metric_type_tiny_name.getDisplayValue();
+			var metric_type_id = metricToCiGr.metric_type_id.sys_id.toString();
+			var metricTypeId = metricToCiGr.getDisplayValue("metric_type_id");
+			var metricTinyName = metricToCiGr.metric_type_id.metric_type_tiny_name.toString();
+			if(metricNames.indexOf(metric_tiny_name) === -1 ) 
+			{
+				metricNames.push(metric_tiny_name);
+				var metricObj = {};
+				if(type=="GOLDEN")
+				{
+					if(this.isGoldenMetric(metricTypeId)) {
+						metricObj.name = metric_tiny_name;
+						metricObj.id = metric_type_id;
+						returnMetrics.push(metricObj);
+					}
+				}
+				else if (type=="CUSTOM_KPIS")
+				{
+					if(this.isCustomKpi(metricTinyName, operatingSystems)) {
+						metricObj.name = metric_tiny_name;
+						metricObj.id = metric_type_id;
+						returnMetrics.push(metricObj);
+					}
+				}
+				else {
+					metricObj.name = metric_tiny_name;
+					metricObj.id = metric_type_id;
+					returnMetrics.push(metricObj);
+				}
+			}
+		}
+		returnMetrics.sort();
+		return JSON.stringify(returnMetrics);
+	},
+	getNestedCIS: function(ciId, parentDepth, childDepth, sysparam, type) {
+		var excludedClasses = 'dscy_route_next_hop,cmdb_ci_memory_module,cmdb_ci_disk,cmdb_ci_disk_partition,cmdb_ci_config_file_tracked,	cmdb_ci_ip_address,dscy_router_interface,cmdb_ci_network_adapter,dscy_route_interface,cmdb_ci_file_system,cmdb_ci_lvm_pool,	cmdb_ci_storage_device,cmdb_ci_nas_file_system,cmdb_ci_os_packages,sys_package,cmdb_ci_storage_pool,cmdb_ci_patches,cmdb_ci_endpoint_manual';
+		try {
+			var returnValues = [];
+			var returnValueIds = [];
+			var idList = [];
+			var originalIdList = [];
+			if (ciId != "") {
+				originalIdList.push(ciId);
+				idList.push(ciId);
+			}
+			if (type == "class") returnValues.push({ name: "None", id: ""});
+			var startGr = new GlideRecord("cmdb_ci");
+			startGr.addQuery("sys_id", idList[0]);
+			startGr.query();
+			if (startGr.next()) {
+				var obj = {};
+				obj.id = startGr.getValue("sys_id");
+				obj.name = startGr.getDisplayValue("name");
+				var id = obj.id;
+				var className = startGr.getDisplayValue("sys_class_name");
+				var classValue = startGr.getValue("sys_class_name");
+				if (type == "class") {
+					obj.id = classValue;
+					obj.name = className;
+				}
+				returnValues.push(obj);
+				returnValueIds.push(obj.id);
+			}
+			while (parentDepth > 0) {
+				var nextIdList = [];
+				while (idList.length > 0) {
+					var currentId = idList.pop();
+					var parentGR = new GlideRecord("cmdb_rel_ci");
+					parentGR.addQuery("child.sys_id", currentId);
+					if (sysparam != "")
+						parentGR.addEncodedQuery(sysparam);
+					parentGR.addQuery("child.sys_class_name", "NOT IN", excludedClasses);
+					parentGR.addQuery("parent.sys_class_name", "NOT IN", excludedClasses);
+					parentGR.query();
+					while (parentGR.next()) {
+						var parentObj = {};
+						var childObj = {};
+						parentObj.name = parentGR.parent.name.getDisplayValue();
+						parentObj.id = parentGR.parent.sys_id.toString();
+						childObj.name = parentGR.child.name.getDisplayValue();
+						childObj.id = parentGR.child.sys_id.toString();
+
+						var parent_id = parentObj.id;
+
+						var parent_class = parentGR.parent.sys_class_name.getDisplayValue();
+						var parent_class_value = parentGR.parent.sys_class_name.toString();
+						var child_class = parentGR.child.sys_class_name.getDisplayValue();
+						var child_class_value = parentGR.child.sys_class_name.toString();
+						if (type == "class") {
+							parentObj.name = parent_class;
+							parentObj.id = parent_class_value;
+							childObj.name = child_class;
+							childObj.id = child_class_value;
+						}
+						if (returnValueIds.indexOf(parentObj.id) == -1) {
+							returnValueIds.push(parentObj.id);
+							returnValues.push(parentObj);
+						}
+						if (returnValueIds.indexOf(childObj.id) == -1) {
+							returnValueIds.push(childObj.id);
+							returnValues.push(childObj);
+						}
+						nextIdList.push(parent_id);
+					}
+				}
+				idList = nextIdList;
+				parentDepth -= 1;
+			}
+
+			if (parentDepth == 0 && originalIdList.length > 0) {
+				idList = originalIdList;
+			}
+
+			while (childDepth > 0) {
+				var nextIdList = [];
+				while (idList.length > 0) {
+					var currentId = idList.pop();
+					var childGR = new GlideRecord("cmdb_rel_ci");
+					childGR.addQuery("parent.sys_id", currentId);
+					if (sysparam != "")
+						childGR.addEncodedQuery(sysparam);
+					childGR.addQuery("child.sys_class_name", "NOT IN", excludedClasses);
+					childGR.addQuery("parent.sys_class_name", "NOT IN", excludedClasses);
+					childGR.query();
+					while (childGR.next()) {
+						var parentObj = {};
+						var childObj = {};
+						parentObj.name = childGR.parent.name.getDisplayValue();
+						parentObj.id = childGR.parent.sys_id.toString();
+						childObj.name = childGR.child.name.getDisplayValue();
+						childObj.id = childGR.child.sys_id.toString();
+						
+						var child_id = childObj.id;
+
+						var parent_class = childGR.parent.sys_class_name.getDisplayValue();
+						var parent_class_value = childGR.parent.sys_class_name.toString();
+						var child_class = childGR.child.sys_class_name.getDisplayValue();
+						var child_class_value = childGR.child.sys_class_name.toString();
+						if (type == "class") {
+							parentObj.name = parent_class;
+							parentObj.id = parent_class_value;
+							childObj.name = child_class;
+							childObj.id = child_class_value;
+						}
+						if (returnValueIds.indexOf(parentObj.id) == -1) {
+							returnValueIds.push(parentObj.id);
+							returnValues.push(parentObj);
+						}
+						if (returnValueIds.indexOf(childObj.id) == -1) {
+							returnValueIds.push(childObj.id);
+							returnValues.push(childObj);
+						}
+						nextIdList.push(child_id);
+					}
+				}
+				idList = nextIdList;
+				childDepth -= 1;
+			}
+			return JSON.stringify(returnValues);
+		} catch (e) {
+			return e;
+		}
+	},
+	getGenericVariable: function (table, nameColumn, idColumn, sysparam, limit) {
+		var returnValues = [];
+		var alreadyAdded = [];
+		var glide = new GlideRecord(table);
+		glide.addEncodedQuery(sysparam);
+		glide.setLimit(limit);
+		glide.query();
+		while(glide.next()) {
+			var obj = {};
+			var newNameColumn = "";
+			var newIdColumn = "";
+			if (nameColumn.includes(":d")) {
+				newNameColumn = nameColumn.substring(0, nameColumn.length - 2);
+				obj.name = glide.getDisplayValue(newNameColumn);
+			} else if (nameColumn.includes(":v")) {
+				newNameColumn = nameColumn.substring(0, nameColumn.length - 2);
+				obj.name = glide.getValue(newNameColumn);
+			} else {
+				obj.name = glide.getDisplayValue(nameColumn);
+			}
+			
+			if (idColumn.includes(":d")) {
+				newIdColumn = idColumn.substring(0, idColumn.length - 2);
+				obj.id = glide.getDisplayValue(newIdColumn);
+			} else if (idColumn.includes(":v")) {
+				newIdColumn = idColumn.substring(0, idColumn.length - 2);
+				obj.id = glide.getValue(newIdColumn);
+			} else {
+				obj.id = glide.getValue(idColumn);
+			}
+			
+			if (alreadyAdded.indexOf(obj.id) == -1) {
+				alreadyAdded.push(obj.id);
+				returnValues.push(obj);
+			}
+		}
+		return JSON.stringify(returnValues);
+	},
+	getOutageStatus: function (ciIds, showPercent, sysparam, limit, page) {
+		try {
+			var outageStatus = [];
+			var pageWindow = this.getPageWindow(limit, page);
+			var serviceGr = new GlideRecord("cmdb_ci_service_discovered");
+			if (ciIds != "")
+				serviceGr.addEncodedQuery("sys_idIN" + ciIds);
+			if (sysparam != "")
+				serviceGr.addEncodedQuery(sysparam);
+			serviceGr.orderBy("name");
+			serviceGr.setLimit(limit);
+			serviceGr.chooseWindow(pageWindow[0], pageWindow[1]);
+			serviceGr.query();
+			while (serviceGr.next()) {
+				var sys_id = serviceGr.getValue("sys_id");
+				var name = serviceGr.getDisplayValue("name");
+				outageStatus.push(this.getOutageByCI(sys_id, name, showPercent));
+			}
+			return JSON.stringify(outageStatus);
+		} catch (e) {
+			return e;
+		}
+	},
+	getGenericTrend: function (table, sysparam, esSearch, trendColumn, trendBy, value, startTimeInput, endTimeInput, groupBy) {
+		var result = [{}];
+		var totalCount = 0;
+		
+		var startTime = new GlideDateTime();
+		startTime.subtract(startTime.getNumericValue());// gets the date to 0
+		startTime.add(startTimeInput);
+		
+		var endTime = new GlideDateTime();
+		endTime.subtract(endTime.getNumericValue());
+		endTime.add(endTimeInput);
+		
+		if (table != "") {
+			//result[0].datapoints.push([0, this.convertSysCreatedStrToMS(startTime)]);
+			var key = table;
+			var trendAg = new GlideAggregate(table);
+			if (groupBy != "") {
+				trendAg.groupBy(groupBy);
+			}
+			trendAg.addTrend(trendColumn, trendBy, value);
+			trendAg.addEncodedQuery(trendColumn + "BETWEEN" + startTime + "@" + endTime);
+			trendAg.addEncodedQuery(sysparam);
+			if (esSearch != "") trendAg.addEncodedQuery("123LUCENE_QUERY321=" + this.encodeBase16(esSearch));
+			trendAg.addAggregate("COUNT");
+			trendAg.setGroup(false);
+			trendAg.query();
+			while (trendAg.next()) {
+				var count = parseInt(trendAg.getAggregate("COUNT"));
+				var timeRef = this.convertSysCreatedStrToMS(trendAg.getValue("timeref"));
+				totalCount += count;
+				if (groupBy != "") {
+					var groupByColumn = trendAg.getDisplayValue(groupBy);
+					key = groupByColumn;
+				}
+				
+				if (result[0][key]) {
+					result[0][key].datapoints.push([count, timeRef]);
+				} else {
+					var entry = { datapoints: [[count, timeRef]] };
+					result[0][key] = entry;
+				}
+			}
+			var resultKeys = Object.keys(result[0]);
+			if (resultKeys.length == 0) {
+				result[0][key] = {datapoints: [[0, this.convertSysCreatedStrToMS(startTime)]]};
+				result[0][key].datapoints.push([0, this.convertSysCreatedStrToMS(endTime)]);
+			}
+			//result[0].datapoints.push([0, this.convertSysCreatedStrToMS(endTime)]);
+		}
+		return JSON.stringify(result);
+	},
+	queryLogData: function (sysparam, limit, page, sortBy, sortDirection, startTimeInput, endTimeInput, esSearch, compressLog) {
+		var returnArray = [];
+		
+		var startTime = new GlideDateTime();
+		startTime.setNumericValue(startTimeInput);
+		var endTime = new GlideDateTime();
+		endTime.setNumericValue(endTimeInput);
+		
+		var pageWindow = this.getPageWindow(limit, page);
+		var logGr = new GlideRecord("sn_occ_log_viewer_parent");
+		logGr.addEncodedQuery("timeBETWEEN" + startTime + "@" + endTime);
+		logGr.addEncodedQuery(sysparam);
+		if (esSearch != "") logGr.addEncodedQuery("123LUCENE_QUERY321=" + this.encodeBase16(esSearch));
+		logGr.setLimit(limit);
+		logGr.chooseWindow(pageWindow[0], pageWindow[1]);
+		if (sortBy != "") {
+			if (sortDirection == "ASC") {
+				logGr.orderBy(sortBy);
+			} else {
+				logGr.orderByDesc(sortBy);
+			}
+		}
+		logGr.query();
+		var rowCount = logGr.getRowCount();
+		while (logGr.next()) {
+			var log = {};
+			log.sys_created_on = this.convertSysCreatedStrToMS(logGr.getValue("time"));
+			if (compressLog) {
+				log.message = this.compressLog(logGr.getDisplayValue("raw_message"));
+			} else {
+				log.message = logGr.getDisplayValue("raw_message");
+			}
+			log.message_field = logGr.getDisplayValue("message");
+			log.application_service = logGr.getDisplayValue("application");
+			log.host = logGr.getDisplayValue("host");
+			log.level = logGr.getDisplayValue("level");
+			log.level = log.level.toLowerCase();
+			log.id = logGr.getValue("sys_id");
+			log.totalLogsReturned = rowCount;
+			returnArray.push(log);
+		}
+		return JSON.stringify(returnArray);
+	},
+	getQueryRowCount: function (table, sysparam, startTimeInput, endTimeInput, timerangeColumn) {
+		if (startTimeInput && endTimeInput) {
+			var start = new GlideDateTime();
+			start.subtract(start.getNumericValue());// gets the date to 0
+			start.add(startTimeInput);
+
+			var end = new GlideDateTime();
+			end.subtract(end.getNumericValue());
+			end.add(endTimeInput);
+		}
+		
+		var returnArray = [];
+		var tableGR = new GlideAggregate(table);
+		tableGR.addEncodedQuery(sysparam);
+		if (startTimeInput && endTimeInput) {
+			tableGR.addEncodedQuery(timerangeColumn + 'BETWEEN' + start + '@' + end);
+		}
+		tableGR.addAggregate('COUNT');
+		tableGR.query();
+		tableGR.next();
+		var obj = {};
+		obj[table] = parseInt(tableGR.getAggregate('COUNT'));
+		returnArray.push(obj);
+		return JSON.stringify(returnArray);
+	},
+	queryTable: function (tableName, columns, sysparam, sortBy, sortDirection, limit, page, getAlertCount, startTimeInput, endTimeInput, timerangeColumn) {
+		if (startTimeInput && endTimeInput) {
+			var start = new GlideDateTime();
+			start.subtract(start.getNumericValue());// gets the date to 0
+			start.add(startTimeInput);
+
+			var end = new GlideDateTime();
+			end.subtract(end.getNumericValue());
+			end.add(endTimeInput);
+		}
+		
+		var returnArray = [];
+		var fields = [];
+		if (columns.indexOf("|") != -1) {
+			fields = this.getValuesByNameMatch(columns, "|");
+		} else {
+			fields = this.getValuesByNameMatch(columns, ",");
+		}
+		if (columns.length == 0)
+			fields = this.getTableColumns(tableName);
+		var pageWindow = this.getPageWindow(limit, page);
+		var tableGR = new GlideRecord(tableName);
+		tableGR.addEncodedQuery(sysparam);
+		if (startTimeInput && endTimeInput) {
+			tableGR.addEncodedQuery(timerangeColumn + 'BETWEEN' + start + '@' + end);
+		}
+		tableGR.setLimit(limit);
+		tableGR.chooseWindow(pageWindow[0], pageWindow[1]);
+		if (sortBy != "") {
+			if (sortDirection == "ASC") {
+				tableGR.orderBy(sortBy);
+			} else {
+				tableGR.orderByDesc(sortBy);
+			}
+		}
+		tableGR.query();
+		while (tableGR.next()) {
+			var obj = {};
+			fields.map(function(field) {
+				if (field.includes(":d")) {
+					field = field.substring(0, field.length - 2);
+					obj[field + ":display"] = tableGR.getDisplayValue(field);
+				} else if (field.includes(":v")) {
+					field = field.substring(0, field.length - 2);
+					obj[field + ":value"] = tableGR.getValue(field);
+				} else {
+					obj[field] = tableGR.getDisplayValue(field);
+				}
+				
+				if (tableName == "sn_disco_certmgmt_certificate_task" && field == "certificate_expiration_date") {
+					var currentTime = new GlideDateTime();
+					var expirationTime = new GlideDateTime(obj[field]);
+					var difference = new GlideDuration();
+					var prefix = "";
+					if (expirationTime < currentTime) {
+						difference = GlideDateTime.subtract(expirationTime, currentTime);
+						prefix = "-";
+					} else {
+						difference = GlideDateTime.subtract(currentTime, expirationTime);
+					}
+					obj["Relative Certificate Expiration"] = prefix + difference.getDisplayValue();
+					obj["Relative Certificate Expiration Days"] = prefix + parseInt(difference.getDisplayValue());
+				}
+				
+				if (field == "vm_object_id") {
+					obj["subscriptions"] = obj[field].substring(obj[field].indexOf("/", obj[field].indexOf("subscriptions")) + 1, obj[field].indexOf("/", obj[field].indexOf("subscriptions") + 14));
+					obj["resourceGroups"] = obj[field].substring(obj[field].indexOf("/", obj[field].indexOf("resourceGroups")) + 1, obj[field].indexOf("/", obj[field].indexOf("resourceGroups") + 15));
+				}
+				/*if (field == "additional_info") {
+					var additional_info = JSON.parse(obj[field]);
+					for (var key in additional_info) {
+						obj[key] = additional_info[key];
+					}
+				}*/
+			});
+			if (getAlertCount) {
+				obj.alertCount = 0;
+				var count = JSON.parse(this.getQueryRowCount('em_alert', 'cmdb_ci=' + tableGR.getValue('cmdb_ci')));
+				obj.alertCount = count[0].em_alert;
+			}
+			returnArray.push(obj);
+			//returnArray.push(this.convertRecordToJSON(tableGR, false));
+		}
+		
+		return JSON.stringify(returnArray);
+	},
+	getAggregate: function(table, sysparam, type, column, groupBy, limit, startTimeInput, endTimeInput, timerangeColumn) {
+		if (startTimeInput && endTimeInput) {
+			var start = new GlideDateTime();
+			start.subtract(start.getNumericValue());// gets the date to 0
+			start.add(startTimeInput);
+
+			var end = new GlideDateTime();
+			end.subtract(end.getNumericValue());
+			end.add(endTimeInput);
+		}
+		
+		var returnArray = [];
+		var tableGA = new GlideAggregate(table);
+		tableGA.addEncodedQuery(sysparam);
+		if (startTimeInput && endTimeInput) {
+			tableGA.addEncodedQuery(timerangeColumn + 'BETWEEN' + start + '@' + end);
+		}
+		tableGA.addAggregate(type, column);
+		tableGA.orderByAggregate(type, column);
+		tableGA.groupBy(groupBy);
+		tableGA.query();
+		while (tableGA.next() && limit > 0) {
+			var obj = {};
+			obj[groupBy] = tableGA.getDisplayValue(groupBy);
+			obj[type] = parseInt(tableGA.getAggregate(type, column));
+			returnArray.push(obj);
+			limit = limit - 1;
+		}
+		return JSON.stringify(returnArray);
+	},
+	getMetrics: function (ciId, startTimeInput, endTimeInput, sysparam) {
+		var metricStr = "";
+		var startTime = new GlideDateTime();
+		startTime.subtract(startTime.getNumericValue());// gets the date to 0
+		startTime.add(startTimeInput);
+		var endTime = new GlideDateTime();
+		endTime.subtract(endTime.getNumericValue());
+		endTime.add(endTimeInput);
+		var cis = this.getValuesByNameMatch(ciId, "|");
+		for(var c = 0; c < cis.length; c++) {
+			var ciTable = "";
+			var ciName = "";
+			var ciGr = new GlideRecord("cmdb_ci");
+			ciGr.addQuery("sys_id", cis[c]);
+			ciGr.query();
+			if (ciGr.next()) {
+				ciTable = ciGr.getValue("sys_class_name");
+				ciName = ciGr.getDisplayValue("name");
+			}
+			//ciTable is a table with metric fields.
+			var metricTableGr = new GlideRecord(ciTable);
+			metricTableGr.addQuery("sys_id", cis[c]);
+			if (sysparam != "")
+				metricTableGr.addEncodedQuery(sysparam);
+			metricTableGr.query();
+			try {
+				var metrics = this.getAllMetricsByCi(cis[c]);  // TODO: get from clotho instead of metric to ci table
+				var builder;
+				var dataSet = '';
+				for (var i = 0; i < metrics.length; i++) {
+					var metricName;
+					//build a transform that returns a simple average
+					builder = new sn_clotho.Transformer(metricTableGr);
+					builder.metric(metrics[i]).avg().label("Average");
+
+					//execute transform and return result for visualization
+					var result = builder.execute(startTime, endTime);
+
+                    // not all metrics have data in clotho. In that case we want to continue with other metrics 
+                    // and not crash
+                    if (!result || !result.getData()) {
+                        continue;
+                    }
+
+					var values = result.getData().getValues();
+					var timestamp = result.getData().getStart().getNumericValue();
+					var period = result.getData().getPeriod() * 1000;
+					metricName = result.getData().getMetricName();
+
+					dataSet+='{"source":"' + ciName + '",';
+					dataSet+='"type":"' + "" + '",';
+					dataSet+='"metricName":"' + metricName + '",';
+					dataSet += ' "datapoints": [';
+
+					for (var j = 0; j < values.length; j++) {
+						// [100,1593283865000],
+						if (values[j])
+							dataSet += '[' + values[j] + ',' + timestamp + '],';
+
+						timestamp += period;
+					}
+
+					// remove the last ','
+					if (dataSet[dataSet.length - 1] == ",")
+						dataSet = dataSet.substring(0, dataSet.length - 1);
+
+					dataSet += ']},';
+				}
+				// remove the last ','
+
+				metricStr += dataSet;
+			} catch (e) {}
+		}
+		if (metricStr.charAt(metricStr.length - 1) == ",") 
+				metricStr = metricStr.substring(0, metricStr.length - 1);
+		return "[" + metricStr + "]";
+	},
+	getSingleMetric: function(ciIdMatch, metricIdMatch, resourceNameMatch,startTimeInput,endTimeInput,sysparam) {
+		var startTime = new GlideDateTime();
+		startTime.subtract(startTime.getNumericValue());// gets the date to 0
+		startTime.add(startTimeInput);
+	
+		var endTime = new GlideDateTime();
+		endTime.subtract(endTime.getNumericValue());
+		endTime.add(endTimeInput);
+		var metricDataStr="";
+		//store cis, resourceName, metricNames
+		var ciIds = this.getValuesByNameMatch(ciIdMatch, "|");
+		var metricIds = this.getValuesByNameMatch(metricIdMatch, "|");
+		var resourceNames = [];
+		var resourceQueryStr ="";
+		if(!this.isMatchAll(resourceNameMatch))
+		{
+			resourceNames = this.getValuesByNameMatch(resourceNameMatch, "|");
+			for(r=0;r<resourceNames.length;r++)
+				resourceQueryStr+=resourceNames[r]+",";
+			
+			resourceQueryStr="^resource_id.nameIN"+resourceQueryStr;
+			if(resourceQueryStr.charAt(resourceQueryStr.length - 1)==',')
+				resourceQueryStr=resourceQueryStr.substring(0, resourceQueryStr.length - 1);
+
+		}
+
+		for(var c=0;c<ciIds.length;c++) {
+			for(var m=0;m<metricIds.length;m++)
+				{
+					var strQuery='metric_type_id.sys_id='+metricIds[m]+'^cmdb_ci.sys_id='+ciIds[c]+resourceQueryStr;
+					var resourceObjs=this.getAllResourcesFromMetricTbl(strQuery);
+					
+					for(var r=0;r<resourceObjs.length;r++)
+					{
+						var returnMetricStr=this.getSingleMetricStr(ciIds[c], resourceObjs[r].metricName, resourceObjs[r].resourceName, startTime, endTime, sysparam);
+						if(returnMetricStr.length>0)
+						{
+							metricDataStr+=returnMetricStr;
+							metricDataStr+=",";
+						}
+					}
+				}
+		}
+		//remove last ","
+		if(metricDataStr.charAt(metricDataStr.length - 1)==',')
+			metricDataStr=metricDataStr.substring(0, metricDataStr.length - 1);
+		return '['+metricDataStr+"]";
+	},
+	getSingleMetricStr: function (ciId, metric_name, resourceName, startTime, endTime, sysparam) {
+		var ciGr = new GlideRecord("cmdb_ci");
+		//get table name
+		var ciTable;
+		if(resourceName!="")
+		{
+			ciGr = new GlideRecord("ci_resource");
+			ciGr.addQuery("cmdb_ci.sys_id", ciId);
+			ciGr.addQuery("name", resourceName);
+		}
+		else
+		{
+			ciGr.addQuery("sys_id", ciId);
+		}
+		ciGr.query();
+		var metricResourceId = ciId;
+		var ciName = ciId;
+		if (ciGr.next())
+		{
+			ciTable = ciGr.getValue("sys_class_name");
+			if(resourceName!="") {
+				metricResourceId=ciGr.getValue("sys_id");
+				ciName = ciGr.cmdb_ci.name.getDisplayValue();
+			} else {
+				ciName = ciGr.getDisplayValue("name");
+			}
+		}
+		var metricTableGr = new GlideRecord(ciTable);
+		metricTableGr.addQuery("sys_id", metricResourceId);
+		if (sysparam!="")
+			metricTableGr.addEncodedQuery(sysparam);
+		metricTableGr.query();
+		try {
+			//build a transform that returns a simple average
+			var builder = new sn_clotho.Transformer(metricTableGr);
+			builder.metric(metric_name).avg().label("Average");
+
+			//execute transform and return result for visualization
+			var result = builder.execute(startTime, endTime);
+
+			var values = result.getData().getValues();
+			var timestamp = result.getData().getStart().getNumericValue();
+			var period = result.getData().getPeriod() * 1000;
+			var metricName = result.getData().getMetricName();
+			
+			var dataSet = {};
+			dataSet.source = ciName;
+			dataSet.type = resourceName;
+			dataSet.metricName = metricName;
+			dataSet.length = values.length;
+			dataSet.values = values;
+			dataSet.datapoints = [];
+			
+			//dataSet.datapoints.push([0, this.convertSysCreatedStrToMS(startTime)]);
+			
+			for (var j = 0; j < values.length; j++) {
+				var point = [values[j], timestamp];
+				dataSet.datapoints.push(point);
+				timestamp += period;
+			}
+			//dataSet.datapoints.push([0, this.convertSysCreatedStrToMS(endTime)]);
+			
+		} catch(err) {
+			return "";
+		}
+		return JSON.stringify(dataSet);
+	},
+	getAnomalyMetrics: function (ciId, metricId, resourceNameMatch, startTimeInput, endTimeInput, sysparam) {
+		try {
+			var returnValues = [];
+			var startTime = new GlideDateTime();
+			startTime.subtract(startTime.getNumericValue());// gets the date to 0
+			startTime.add(startTimeInput);
+			var endTime = new GlideDateTime();
+			endTime.subtract(endTime.getNumericValue());
+			endTime.add(endTimeInput);
+			var ciIds = this.getValuesByNameMatch(ciId, "|");
+			var chosen_metrics = "";
+			if (metricId != "*") {
+				chosen_metrics = this.getValuesByNameMatch(metricId, "|");
+			}
+			for(var c=0;c<ciIds.length;c++) {
+				var metricIds = this.getMetricIdsByCi(ciIds[c],chosen_metrics);
+				for(var m = 0; m < metricIds.length; m++) {
+					var anomalyMetricData = new SNC.MetricScriptableApis();
+					var metricDataStr = anomalyMetricData.getMetricData(
+						ciIds[c],
+						startTime.getNumericValue(),
+						endTime.getNumericValue(),
+						metricIds[m].metricId,
+						""//Resource ID is not being used
+					);
+					var obj = {};
+					obj.ciName = metricIds[m].ciName;
+					obj.metricName = metricIds[m].metricName;
+					obj.data = JSON.parse(metricDataStr);
+					returnValues.push(obj);
+				}
+			}
+
+			return JSON.stringify(returnValues);
+		} catch (e) {
+			return e;
+		}
+	},
+	getAlerts: function(ciId, alertType, alertState, sysparam, limit, page, sortBy, startTime, endTime, timerangeColumn, tagFilters) {
+		var dataStr="";
+		var alertStateFilter="Open,Reopen";
+		if (alertState == "All")
+			alertStateFilter="Open,Reopen,Closed";
+		var sysparam_query="";
+		if (sysparam != "")
+			sysparam_query = sysparam;
+		var cis =[];
+		if(alertType=="service")
+			cis = this.getAllCIsInService(ciId);
+		else if (alertType=="ci")
+			cis = this.getValuesByNameMatch(ciId, "|");
+		else if (alertType=="none")
+			cis=[""];
+		var tagSysparam = "";
+		if (tagFilters != "") {
+			tagSysparam = this.createTagSysparam(tagFilters, 'additional_info');
+		}
+		
+		for(var i=0;i<cis.length;i++) {
+			var alertsbyCI=this.getAlertsByCI(cis[i],alertStateFilter,sysparam_query, limit, page, sortBy, startTime, endTime, timerangeColumn, tagSysparam);
+			if (alertsbyCI.length > 0)
+				dataStr += alertsbyCI + ",";
+		}
+		
+		if(dataStr.charAt(dataStr.length - 1)==',')
+			dataStr=dataStr.substring(0, dataStr.length - 1);
+		return '['+dataStr+"]";
+	},
+	getChanges: function (ciId, alertType, sysparam, limit, page, startTime, endTime, timerangeColumn) {
+		var dataStr = "";
+		var sysparam_query="";
+		if (sysparam != "")
+			sysparam_query = sysparam;
+		var cis =[];
+		if(alertType=="service")
+			cis = this.getAllCIsInService(ciId);
+		else if (alertType=="ci")
+			cis = this.getValuesByNameMatch(ciId, "|");
+		else if (alertType=="none")
+			cis=[""];
+		
+		for(var i=0;i<cis.length;i++) {
+			var changesByCI=this.getChangesByCI(cis[i], sysparam_query, limit, page, startTime, endTime, timerangeColumn);
+			if (changesByCI.length > 0)
+				dataStr += changesByCI + ",";
+		}
+		if (dataStr.charAt(dataStr.length - 1) == ",")
+			dataStr = dataStr.substring(0, dataStr.length - 1);
+		return "[" + dataStr + "]";
+	},
+	getTopology: function (serviceId, childDepth, parentDepth, sysparam_query) {
+		var excludedClasses = 'dscy_route_next_hop,cmdb_ci_memory_module,cmdb_ci_disk,cmdb_ci_disk_partition,cmdb_ci_config_file_tracked,	cmdb_ci_ip_address,dscy_router_interface,cmdb_ci_network_adapter,dscy_route_interface,cmdb_ci_file_system,cmdb_ci_lvm_pool,	cmdb_ci_storage_device,cmdb_ci_nas_file_system,cmdb_ci_os_packages,sys_package,cmdb_ci_storage_pool,cmdb_ci_patches,cmdb_ci_endpoint_manual';
+		var topologyRows='{"rows": [';
+		var childDepthLimit = 3;
+		var parentDepthLimit = 0;
+		if (childDepth != "" && childDepth >= 0)
+			childDepthLimit = childDepth;
+		if (parentDepth != "" && parentDepth >= 0)
+			parentDepthLimit = parentDepth;
+		var parentIds = [];
+		var originalIds = [];
+		if (serviceId != "") {
+			originalIds.push(serviceId);
+			parentIds.push(serviceId);
+		}
+		try {
+			//Adding starting point node so that all nodes have a parent which can pass classes and alerts down
+			var startGR = new GlideRecord("cmdb_ci");
+			startGR.addQuery('sys_id', parentIds[0]);
+			startGR.query();
+			if (startGR.next()) {
+				var name = startGR.getDisplayValue("name");
+				name = name.replace(/\\/g, "/");
+				var className = startGR.getDisplayValue("sys_class_name");
+				var classNameValue = startGR.getValue("sys_class_name");
+				var sys_id = startGR.getValue("sys_id");
+				var alertCount = this.getAlertsCountByCI(parentIds[0],"","Open,Reopen");
+				if (alertCount == 0) alertCount = -1;
+				var childRow = '["' + className + "||" + classNameValue + '",' + 0 + ',"' + "Starting Point||0" + '","' + name + "||" + sys_id + '",' + alertCount + ',' + -1 + '],';
+				topologyRows += childRow;
+			}
+
+			while (parentDepthLimit > 0) {
+				var nextChildIds = [];
+				while (parentIds.length > 0) {
+					var childId = parentIds.pop();
+					var parentGR = new GlideRecord("cmdb_rel_ci");
+					parentGR.addQuery("child.sys_id", childId);
+					if (sysparam_query != "")
+						parentGR.addEncodedQuery(sysparam_query);
+					parentGR.addQuery("child.sys_class_name", "NOT IN", excludedClasses);
+					parentGR.addQuery("parent.sys_class_name", "NOT IN", excludedClasses);
+					parentGR.query();
+					if (parentGR.hasNext()) {
+						while (parentGR.next()) {
+							var parentObj = {};
+							parentObj.parent_name = parentGR.parent.name.toString();
+							parentObj.parent_name = parentObj.parent_name.replace(/\\/g, "/");
+							parentObj.parent_id = parentGR.parent.sys_id.toString();
+							parentObj.parent_class = parentGR.parent.sys_class_name.getDisplayValue();
+							parentObj.parent_class_value = parentGR.parent.sys_class_name.toString();
+							parentObj.child_class = parentGR.child.sys_class_name.getDisplayValue();
+							parentObj.child_class_value = parentGR.child.sys_class_name.toString();
+							parentObj.child_name = parentGR.child.name.toString();
+							parentObj.child_name = parentObj.child_name.replace(/\\/g, "/");
+							parentObj.child_id = parentGR.child.sys_id.toString();
+							
+							var alertCount = this.getAlertsCountByCI(parentObj.parent_id,"","Open,Reopen");
+							if (alertCount == 0) 
+								alertCount = -1;
+							var childRow = '["' + parentObj.parent_class + "||" + parentObj.parent_class_value + '",' + 0 + ',"' + parentObj.child_name + "||" + parentObj.child_id + '","' + parentObj.parent_name + "||" + parentObj.parent_id + '",' + alertCount + ',' + -1 + '],';
+							topologyRows += childRow;
+							nextChildIds.push(parentObj.parent_id);
+						}
+					} else {
+						var cmdb_ci_gr = new GlideRecord("cmdb_ci");
+						cmdb_ci_gr.addQuery("sys_id", childId);
+						cmdb_ci_gr.addEncodedQuery(sysparam_query);
+						cmdb_ci_gr.addQuery("sys_class_name", "NOT IN", excludedClasses);
+						cmdb_ci_gr.query();
+						if (cmdb_ci_gr.next()) {
+							var childName = cmdb_ci_gr.getDisplayValue("name");
+							childName = childName.replace(/\\/g, "/");
+							var childClass = cmdb_ci_gr.getDisplayValue("sys_class_name");
+							var childClassValue = cmdb_ci_gr.getValue("sys_class_name");
+							var childSysId = cmdb_ci_gr.getValue("sys_id");
+							var childRow = '["' + childClass + "||" + childClassValue + '",' + 0 + ',"' + childName + "||" + childSysId + '","' + childName + "||" + childSysId + '",' + 0 + ',' + -1 + '],';
+							topologyRows += childRow;
+						}
+					}
+				}
+				parentIds=nextChildIds;
+				parentDepthLimit -= 1;
+			}
+
+			if (parentDepthLimit == 0 && originalIds.length > 0) {
+				parentIds=originalIds;
+			}
+
+			while (childDepthLimit > 0) {
+				var nextParentIds = [];
+				while (parentIds.length > 0) {
+					var parentId = parentIds.pop();
+					var childGR = new GlideRecord("cmdb_rel_ci");
+					childGR.addQuery("parent.sys_id", parentId);
+					if (sysparam_query != "")
+						childGR.addEncodedQuery(sysparam_query);
+					childGR.addQuery("child.sys_class_name", "NOT IN", excludedClasses);
+					childGR.addQuery("parent.sys_class_name", "NOT IN", excludedClasses);
+					childGR.query();
+					if (childGR.hasNext()) {
+						while (childGR.next()) {
+							var childObj = {};
+							childObj.parent_name = childGR.parent.name.toString();
+							childObj.parent_name = childObj.parent_name.replace(/\\/g, "/");
+							childObj.parent_id = childGR.parent.sys_id.toString();
+							childObj.parent_class = childGR.parent.sys_class_name.getDisplayValue();
+							childObj.parent_class_value = childGR.parent.sys_class_name.toString();
+							childObj.child_id = childGR.child.sys_id.toString();
+							childObj.child_name = childGR.child.name.toString();
+							childObj.child_name = childObj.child_name.replace(/\\/g, "/");
+							childObj.child_class = childGR.child.sys_class_name.getDisplayValue();
+							childObj.child_class_value = childGR.child.sys_class_name.toString();
+							
+							var alertCount = this.getAlertsCountByCI(childObj.child_id,"","Open,Reopen");
+							if (alertCount == 0) alertCount = -1;
+							var childRow = '["' + childObj.child_class + "||" + childObj.child_class_value + '",' + 0 + ',"' + childObj.parent_name + "||" + childObj.parent_id + '","' + childObj.child_name + "||" + childObj.child_id + '",' + alertCount + ',' + -1 + '],';
+							topologyRows += childRow;
+							nextParentIds.push(childObj.child_id);
+						}
+					} else {
+						var cmdbGR = new GlideRecord("cmdb_ci");
+						cmdbGR.addQuery("sys_id", parentId);
+						cmdbGR.addEncodedQuery(sysparam_query);
+						cmdbGR.addQuery("sys_class_name", "NOT IN", excludedClasses);
+						cmdbGR.query();
+						if (cmdbGR.next()) {
+							var parentName = cmdbGR.getDisplayValue("name");
+							parentName = parentName.replace(/\\/g, "/");
+							var parentClass = cmdbGR.getDisplayValue("sys_class_name");
+							var parentClassValue = cmdbGR.getValue("sys_class_name");
+							var parentSysId = cmdbGR.getValue("sys_id");
+							var childRow = '["' + parentClass + "||" + parentClassValue + '",' + 0 + ',"' + parentName + "||" + parentSysId + '","' + parentName + "||" + parentSysId + '",' + 0 + ',' + -1 + '],';
+							topologyRows += childRow;
+						}
+					}
+				}
+				parentIds = nextParentIds;
+				childDepthLimit -= 1;
+			}
+
+			if(topologyRows.charAt(topologyRows.length - 1)==',')
+				topologyRows=topologyRows.substring(0, topologyRows.length - 1);
+			topologyRows+="]}";
+			return topologyRows;
+		} catch (error) {
+			return error;
+		}
+	},
+	getAllMetrics: function (sysparam) {
+		var gr = new GlideRecord('sa_metric_map');
+		var returnStr="";
+		if(sysparam.length>0)
+			gr.addEncodedQuery(sysparam);
+		gr.query();
+		while (gr.next())
+		{	
+			var obj = new Object();
+			obj.sys_created_on=gr.getValue("sys_created_on");
+			obj.metric_type_id= gr.getDisplayValue("metric_type_id");
+			obj.metric_tiny_name= gr.metric_type_id.metric_type_tiny_name.toString();
+			obj.ci = gr.getDisplayValue("cmdb_ci");
+			obj.resource_id = gr.getDisplayValue("resource_id");
+			obj.resource = gr.getDisplayValue("resource");
+			obj.source= gr.getDisplayValue("source");
+			var jsonString= JSON.stringify(obj);
+			returnStr+=jsonString;
+			returnStr+=",";
+
+		}
+		if (returnStr.charAt(returnStr.length - 1) == ",")
+			returnStr=returnStr.substring(0, returnStr.length - 1);
+
+		return '['+returnStr+"]";
+	},
+	queryGeohashMap: function (table, regionColumn, sysparam) {
+		var aggArray = JSON.parse(this.getAggregate(table, sysparam, 'COUNT', 'vm_sys_id', regionColumn, 9999));
+		for(var i = 0; i < aggArray.length; i++) {
+			aggArray[i].geohash = this.getGeohash(aggArray[i][regionColumn]);
+		}
+		return JSON.stringify(aggArray);
+	},
+	getGeohash: function (regionName) {
+		var geohash = regionName;
+		switch (regionName) {
+			case 'us-east-1':
+				geohash = 'dqcjqfz6yf38d';
+				break;
+			case 'us-east-2':
+				geohash = 'dphgr6dnezjs4';
+				break;
+			case 'us-west-1':
+				geohash = '9q8yyk8yuv5kd';
+				break;
+			case 'us-west-2':
+				geohash = 'c20fbrjxncc43';
+				break;
+			case 'af-south-1':
+				geohash = 'k3vp50pvrd51u';
+				break;
+			case 'ap-east-1':
+				geohash = 'wecpkt5uxuzby';
+				break;
+			case 'ap-south-1':
+				geohash = 'te7ud2evsmnuy';
+				break;
+			case 'ap-northeast-3':
+				geohash = 'xn0m77v9tm927';
+				break;
+			case 'ap-northeast-2':
+				geohash = 'wydm9qy8cjsnh';
+				break;
+			case 'ap-southeast-1':
+				geohash = 'w21zdqpk3w897';
+				break;
+			case 'ap-southeast-2':
+				geohash = 'r3gx2f75zfr55';
+				break;
+			case 'ap-northeast-1':
+				geohash = 'xn774c06kdtd9';
+				break;
+			case 'ca-central-1':
+				geohash = 'f25dvgmfw9w52';
+				break;
+			case 'eu-central-1':
+				geohash = 'u0yjjd6jk0zj7';
+				break;
+			case 'eu-west-1':
+				geohash = 'gc7x9813hhqwb';
+				break;
+			case 'eu-west-2':
+				geohash = 'gcpvj0dup40sx';
+				break;
+			case 'eu-south-1':
+				geohash = 'u0nd9hebnjghx';
+				break;
+			case 'eu-west-3':
+				geohash = 'u09tvw0f6szye';
+				break;
+			case 'eu-north-1':
+				geohash = 'u6sce0t4k7qt0';
+				break;
+			case 'me-south-1':
+				geohash = 'thevpng8hmub2';
+				break;
+			case 'sa-east-1':
+				geohash = '6gyf4bf8m0us1';
+				break;
+			case 'australiacentral':
+				geohash = 'r3dp3931thdm5';
+				break;
+			case 'australiacentral2':
+				geohash = 'r3dp3931thdm5';
+				break;
+			case 'australiaeast':
+				geohash = 'r3gx2f75zfr55';
+				break;
+			case 'australiasoutheast':
+				geohash = 'r1r0fsnzshf6z';
+				break;
+			case 'brazilsouth':
+				geohash = '6gyf4bf8m0us1';
+				break;
+			case 'brazilsoutheast':
+				geohash = '75cm9tfmyw5rp';
+				break;
+			case 'canadacentral':
+				geohash = 'dpz83dffmxpu1';
+				break;
+			case 'canadaeast':
+				geohash = 'f2m66b68fs1h';
+				break;
+			case 'centralindia':
+				geohash = 'tek92esc6f7u7';
+				break;
+			case 'centralus':
+				geohash = '9zqvj0jv8t0h9';
+				break;
+			case 'eastasia':
+				geohash = 'wecpkt5uxuzby';
+				break;
+			case 'eastus':
+				geohash = 'dqcjqfz6yf38d';
+				break;
+			case 'eastus2':
+				geohash = 'dq8vtfhf963e7';
+				break;
+			case 'francecentral':
+				geohash = 'u09tvw0f6szye';
+				break;
+			case 'francesouth':
+				geohash = 'spey61yhkcnpm';
+				break;
+			case 'germanynorth':
+				geohash = 'u33dc0cpnnfjj';
+				break;
+			case 'germanywestcentral':
+				geohash = 'u0yjjd6jk0zj7';
+				break;
+			case 'japaneast':
+				geohash = 'xn77cz94nj149';
+				break;
+			case 'japanwest':
+				geohash = 'xn0m77v9tm927';
+				break;
+// 			case 'jioindiawest':
+// 				geohash = '';
+// 				break;
+			case 'koreacentral':
+				geohash = 'wydm9qy8cjsnh';
+				break;
+			case 'koreasouth':
+				geohash = 'wy7b1hnpb2nmz';
+				break;
+			case 'northcentralus':
+				geohash = 'dp3wjztvtwq8w';
+				break;
+			case 'northeurope':
+				geohash = 'gc7x9813hhqwb';
+				break;
+			case 'norwayeast':
+				geohash = 'u4xsudvx96wvz';
+				break;
+			case 'norwaywest':
+				geohash = 'u4ez91gksg7h4';
+				break;
+			case 'southafricanorth':
+				geohash = 'ke7fyjxqj94kv';
+				break;
+			case 'southafricawest':
+				geohash = 'k3vp50pvrd51u';
+				break;
+			case 'southcentralus':
+				geohash = '9vhx0mjvqc9yv';
+				break;
+			case 'southindia':
+				geohash = 'tf346tek5k3d0';
+				break;
+			case 'southeastasia':
+				geohash = 'w21zdqpk3w897';
+				break;
+			case 'switzerlandnorth':
+				geohash = 'u0qjd2ey7guej';
+				break;
+			case 'switzerlandwest':
+				geohash = '	u0hqgg321fy85';
+				break;
+			case 'uaecentral':
+				geohash = 'thqej7sq5yqkp';
+				break;
+			case 'uaenorth':
+				geohash = 'thrr3squys6uu';
+				break;
+			case 'uksouth':
+				geohash = 'gcpvj0dup40sx';
+				break;
+			case 'ukwest':
+				geohash = 'gcjszevjcy68t';
+				break;
+			case 'westcentralus':
+				geohash = '9xm6nc21z0r9u';
+				break;
+			case 'westeurope':
+				geohash = 'u173zmsw9evff';
+				break;
+			case 'westindia':
+				geohash = 'te7ud2evsmnuy';
+				break;
+			case 'westus':
+				geohash = '9q8yyk8yuvhh';
+				break;
+			case 'westus2':
+				geohash = 'c23nb62w20s6r';
+				break;
+			case 'westus3':
+				geohash = '9tbq39n4vtmh9';
+				break;
+			default:
+				break;
+		}
+		return geohash;
+	},
+	
+	// Helper Methods
+	getPageWindow: function (limit, page) {
+		var pageWindow = [];
+		if (page == 0) {
+			pageWindow.push(0);
+			pageWindow.push(limit);
+		} else {
+			pageWindow.push(limit * page);
+			pageWindow.push(limit * (page + 1));
+		}
+		return pageWindow;
+	},
+	getTableColumns: function (table) {
+		var returnArray = [];
+		var columnGr = new GlideRecord("sys_dictionary");
+		columnGr.addQuery("name", table);
+		columnGr.addEncodedQuery("element!=NULL");
+		columnGr.query();
+		while (columnGr.next()) {
+			var columnName = columnGr.getDisplayValue("element");
+			returnArray.push(columnName);
+		}
+		return returnArray;
+	},
+	getAlertsCountByCI: function (ciId,filter,alertState) {
+		
+		var alertGr = new GlideRecord('em_alert');
+		alertGr.addQuery('state','IN',alertState);
+		//alertGr.addQuery('sys_created_on','<=',gs.daysAgo(7));
+		alertGr.addQuery("cmdb_ci.sys_id", ciId);
+
+		alertGr.query();
+		var alertsStr="";
+		var count = alertGr.getRowCount();
+		return count;
+	},
+	isCustomKpi: function (metricName, operatingSystems) {
+		var returnValue = false;
+		if (operatingSystems.contains("cmdb_ci_linux_server")) {
+			switch (metricName) {
+				case "cpu_system_percentage":
+					returnValue = true;
+					break;
+				case "load_avg_five":
+					returnValue = true;
+					break;
+				case "memory_percent_available":
+					returnValue = true;
+					break;
+				default:
+					returnValue = false;
+					break;
+			}
+		}
+		if (operatingSystems.contains("cmdb_ci_win_server")) {
+			switch (metricName) {
+				case "cpu_loadavgsec":
+					returnValue = true;
+					break;
+				case "cpu_queuelength":
+					returnValue = true;
+					break;
+				case "ram_usage_percentage":
+					returnValue = true;
+					break;
+				default:
+					returnValue = false;
+					break;
+			}
+		}
+		return returnValue;
+	},
+	isGoldenMetric: function (metricName) {
+		var gr = new GlideRecord('sa_metric_dashboard_metadata');
+		gr.query();
+
+		while (gr.next()) {
+			if(gr.source_metrics_types.getDisplayValue().contains(metricName))
+				return true;
+		}
+		return false;
+	},
+	getCINameByID: function (sys_id) {
+		var name = "";
+		var nameGr = new GlideRecord("cmdb_ci");
+		nameGr.addQuery("sys_id", sys_id);
+		nameGr.query();
+		if (nameGr.next()) {
+			name = nameGr.getDisplayValue("name");
+		}
+		return name;
+	},
+	getOutageByCI: function (ci, name, showPercent) {
+		var hundredPercentUptime = 7776000;
+		var actualUptime = hundredPercentUptime;
+		var outages = {};
+		outages.ci = name;
+		outages.datapoints = [];
+		for (var i = 89; i >= 0; i--) {
+			var date = new GlideDateTime(gs.daysAgo(i));
+			var outageGr = new GlideRecord("cmdb_ci_outage");
+			outageGr.addQuery("cmdb_ci", ci);
+			outageGr.addQuery("end", ">=", gs.daysAgoStart(i)).addOrCondition("end", "=", "NULL");
+			outageGr.addQuery("begin", "<=", gs.daysAgoEnd(i));
+			outageGr.query();
+
+			if (outageGr.hasNext()) {
+				while (outageGr.next()) {
+					var begin = new GlideDateTime(outageGr.getValue("begin"));
+					var end = new GlideDateTime(outageGr.getValue("end"));
+					var type = outageGr.getDisplayValue("type");
+					
+					if (begin) {
+						outages.datapoints.push([type, begin.getNumericValue()]);
+						if (end) {
+							outages.datapoints.push(["Operational", end.getNumericValue()]);
+						} else {
+							outages.datapoints.push([type, date.getNumericValue()]);
+						}
+							
+					}
+					
+					if (begin && end)
+						actualUptime -= (end.getNumericValue()*0.001) - (begin.getNumericValue()*0.001);
+				}
+			} else {
+				outages.datapoints.push(["Operational", date.getNumericValue()]);
+			}
+		}
+		if (showPercent)
+			outages.uptimePercentage = actualUptime / hundredPercentUptime;
+		return outages;
+	},
+	encodeBase16: function (search) {
+		var string = unescape(encodeURIComponent(search));
+		var hex16 = '';
+		for (var i = 0; i < string.length; i++) {
+			hex16 += string.charCodeAt(i).toString(16);
+		}
+		return hex16;
+	},
+	compressLog: function (raw_message) {
+		var jsonMessage = JSON.parse(raw_message);
+		var returnMessage = {};
+		returnMessage.message = jsonMessage.message;
+		returnMessage['sn-sourcetype'] = jsonMessage.fields['sn-sourcetype'];
+		returnMessage['sn-service'] = jsonMessage.fields['sn-service'];
+		returnMessage['sn-application'] = jsonMessage.fields['sn-application'];
+		returnMessage['sn-ciname'] = jsonMessage.fields['sn-ciname'];
+		returnMessage['agent-hostname'] = jsonMessage.agent.hostname;
+		return JSON.stringify(returnMessage);
+	},
+	flatten: function (oldObject) {
+		var newObject = {};
+
+		this.flattenHelper(oldObject, newObject, '');
+
+		return newObject;
+	},
+	flattenHelper: function (currentObject, newObject, previousKeyName) {
+		for (var key in currentObject) {
+			var value = currentObject[key];
+
+			if (value.constructor !== Object) {
+				if (previousKeyName == null || previousKeyName == '') {
+					newObject[key] = value;
+				} else {
+					if (key == null || key == '') {
+						newObject[previousKeyName] = '"' + value + '"';
+					} else {
+						newObject[previousKeyName + '_' + key] = '"' + value + '"';
+					}
+				}
+			} else {
+				if (previousKeyName == null || previousKeyName == '') {
+					this.flattenHelper(value, newObject, key);
+				} else {
+					this.flattenHelper(value, newObject, previousKeyName + '_' + key);
+				}
+			}
+		}
+	},
+	getAllCIsInService: function (serviceId) {
+		var cis = [];
+        var childrenCIs= new  GlideRecord("em_impact_graph");
+		childrenCIs.addQuery("business_service", serviceId);
+		childrenCIs.query();
+        while (childrenCIs.next())
+        {
+			var name = childrenCIs.getDisplayValue("child_name");
+			var id = childrenCIs.getValue("child_id");
+			if (name != "" && cis.indexOf(id) == -1) {
+				cis.push(id);
+			}
+        }
+        return cis;
+	},
+	getChangesByCI: function (ciId, sysparam_query, limit, page, startTime, endTime, timerangeColumn) {
+		if (startTime && endTime) {
+			var start = new GlideDateTime();
+			start.subtract(start.getNumericValue());// gets the date to 0
+			start.add(startTime);
+
+			var end = new GlideDateTime();
+			end.subtract(end.getNumericValue());
+			end.add(endTime);
+		}
+		var pageWindow = this.getPageWindow(limit, page);
+		var changeGr = new GlideRecord('change_request');
+		if (ciId != "")
+			changeGr.addQuery("cmdb_ci", ciId);
+		if (sysparam_query != "")
+			changeGr.addEncodedQuery(sysparam_query);
+		if (startTime && endTime) {
+			changeGr.addEncodedQuery(timerangeColumn + 'BETWEEN' + start + '@' + end);
+		}
+		changeGr.setLimit(limit);
+		changeGr.chooseWindow(pageWindow[0], pageWindow[1]);
+		changeGr.query();
+		var changeStr = "";
+		while (changeGr.next()) {
+			var change = new Object();
+			change.active = changeGr.getDisplayValue("active");
+			change.changeId = changeGr.getValue("number");
+			change.CI = changeGr.getDisplayValue("cmdb_ci");
+			change.service = changeGr.getDisplayValue("business_service");
+			change.state = changeGr.getDisplayValue("state");
+			change.escalation = changeGr.getValue("escalation");
+			change.urgency = changeGr.getDisplayValue("urgency");
+			change.impact = changeGr.getDisplayValue("impact");
+			change.short_description = changeGr.getDisplayValue("short_description");
+			change.created_on = changeGr.getDisplayValue("sys_created_on");
+			change.opened_at = changeGr.getDisplayValue("opened_at");
+			change.type = changeGr.getDisplayValue("type");
+			change.category = changeGr.getDisplayValue("category");
+			change.start_time = this.convertSysCreatedStrToMS(changeGr.getValue("sys_created_on"));
+			var jsonString = JSON.stringify(change);
+			changeStr += jsonString + ",";
+		}
+		changeStr = changeStr.substring(0, changeStr.length - 1);
+		return changeStr;
+	},
+	getAlertsByCI: function (ciId, filter, query, limit, page, sortBy, startTime, endTime, timerangeColumn, tagSysparam) {
+		if (startTime && endTime) {
+			var start = new GlideDateTime();
+			start.subtract(start.getNumericValue());// gets the date to 0
+			start.add(startTime);
+
+			var end = new GlideDateTime();
+			end.subtract(end.getNumericValue());
+			end.add(endTime);
+		}
+		
+		
+		var queryFilter;
+		if (filter != "")
+			queryFilter=filter;
+		var sysparam_query;
+		if (query != "")
+			sysparam_query=query;
+		var pageWindow = this.getPageWindow(limit, page);
+		var alertGr = new GlideRecord('em_alert');
+		if (queryFilter) {
+			alertGr.addQuery('state','IN',queryFilter);
+		}
+		if (sysparam_query) {
+			alertGr.addEncodedQuery(sysparam_query);
+		}
+		if (tagSysparam != "") {
+			alertGr.addEncodedQuery(tagSysparam);
+		}
+		if (ciId != "")
+			alertGr.addQuery("cmdb_ci.sys_id", ciId);
+		if (startTime && endTime) {
+			alertGr.addEncodedQuery(timerangeColumn + 'BETWEEN' + start + '@' + end);
+		}
+		alertGr.setLimit(limit);
+		alertGr.chooseWindow(pageWindow[0], pageWindow[1]);
+		alertGr.orderBy(sortBy);
+		alertGr.query();
+		var alertsStr="";
+		
+		while (alertGr.next())
+        {	
+			var alert = new Object();
+			alert.sys_created_on = this.convertSysCreatedStrToMS(alertGr.getValue("sys_created_on"));
+			
+			alert.AlertId=alertGr.getValue("number");
+			alert.Incident=alertGr.getDisplayValue("incident");
+			alert.IncidentSysID=alertGr.getValue("incident");
+			alert.incidentPriority = parseInt(alertGr.incident.priority.toString());
+			alert.Group=alertGr.getDisplayValue("group_source");
+			alert.Severity  = alertGr.getDisplayValue("severity");
+			alert.Priortity =alertGr.getDisplayValue("sn_priority_group");
+			alert.State  = alertGr.getDisplayValue("state");
+			alert.Acknowledged =alertGr.getDisplayValue("acknowledged");
+			alert.Summary=alertGr.getDisplayValue("message_key");
+			alert.CI=alertGr.getDisplayValue("cmdb_ci");
+			alert.CIClass = alertGr.cmdb_ci.sys_class_name.getDisplayValue();
+			alert.CISysID = alertGr.getValue("cmdb_ci");
+			alert.MetricName=alertGr.getDisplayValue("metric_name");
+			alert.Resource=alertGr.getDisplayValue("resource");
+			alert.Source=alertGr.getDisplayValue("source");
+			alert.Maintenance=alertGr.getDisplayValue("maintenance");
+			alert.Description=alertGr.getValue("description");
+			alert.EventCount=parseInt(alertGr.getValue("event_count"));
+			alert.IsGroup=alertGr.getDisplayValue("is_group_alert");
+			alert.SeverityNum  = parseInt(alertGr.getValue("severity"));
+			alert.PriortityNum =parseInt(alertGr.getValue("sn_priority_group"));
+			alert.Updated = this.convertSysCreatedStrToMS(alertGr.getValue("sys_updated_on"));
+			alert.last_event_time = this.convertSysCreatedStrToMS(alertGr.getValue("last_event_time"));
+			alert.sys_id=alertGr.getValue("sys_id");
+			alert.additional_info=alertGr.getValue("additional_info");
+			alert.type = alertGr.getDisplayValue('type');
+			alert.uiAction = "UI Actions";
+			alert.annotationText = '<p>' + alert.Description + '<p/><a href="/d/tI7kwUKnz?var-ci=' + alert.CISysID + '" rel="noopener noreferrer" target="_blank">' + alert.CI + ' CI Details<a/>';
+			
+			try {
+				var additional_info_json = JSON.parse(alert.additional_info);
+				alert.anomaly_count = parseInt(additional_info_json.sn_anomaly_current);
+			} catch (e) {}
+			alert.node = alertGr.getDisplayValue("node");
+			alert.start_time = this.convertSysCreatedStrToMS(alertGr.getValue("sys_created_on"));
+			
+			alert.secondary_alerts = 0;
+			alert.secondary_distinct_sources = 0;
+			if (alert.Group != "Secondary" && alert.Group != "") {
+				alert.drilldownSysID = alert.sys_id;
+				var secondaryGr = new GlideAggregate("em_alert");
+				secondaryGr.addQuery("parent", alert.sys_id);
+				secondaryGr.addAggregate("COUNT", "sys_id");
+				secondaryGr.groupBy("parent");
+				secondaryGr.query();
+				if (secondaryGr.next()) {
+					alert.secondary_alerts = parseInt(secondaryGr.getAggregate("COUNT", "sys_id"));
+				}
+				
+				var distinctSourceGr = new GlideAggregate("em_alert");
+				distinctSourceGr.addQuery("parent", alert.sys_id);
+				distinctSourceGr.addAggregate("COUNT", "sys_id");
+				distinctSourceGr.groupBy("source");
+				distinctSourceGr.query();
+				while (distinctSourceGr.next()) {
+					alert.secondary_distinct_sources += 1;
+				}
+			} else {
+				alert.drilldownSysID = alertGr.getValue("parent");
+			}
+			
+			alert.impactedServicesCount = alertGr.getValue('sn_services');
+			alert.impactedServices = "";
+			if (alert.impactedServicesCount > 0) {
+				var impactedSysIDs = new this.getImpactedServicesForAlert(alert.sys_id);
+				var endSubstring = this.findNthIndex(impactedSysIDs, ",", 3);
+				if (endSubstring == -1) {
+					endSubstring = impactedSysIDs.length;
+				}
+				var impactedServiceSysIDs = impactedSysIDs.substring(0, endSubstring);
+				var serviceGr = new GlideRecord("cmdb_ci_service");
+				serviceGr.addEncodedQuery("sys_idIN" + impactedServiceSysIDs);
+				serviceGr.orderBy("name");
+				serviceGr.setLimit(3);
+				serviceGr.query();
+				while (serviceGr.next()) {
+					alert.impactedServices += serviceGr.getDisplayValue("name") + ",";
+				}
+				if (alert.impactedServices.charAt(alert.impactedServices.length - 1) == ",")
+					alert.impactedServices = alert.impactedServices.substring(0, alert.impactedServices.length - 1);
+			}
+			
+			var jsonString= JSON.stringify(alert);
+			alertsStr+=jsonString;
+			alertsStr+=",";
+		}
+		if (alertsStr.charAt(alertsStr.length - 1) == ",")
+			alertsStr=alertsStr.substring(0, alertsStr.length - 1);
+		
+		return(alertsStr);
+	},
+	getAllResourcesFromMetricTbl: function (strQuery) {
+		var resources = [];
+		
+		var metricToCiGr = new GlideRecord('sa_metric_map');
+		metricToCiGr.addEncodedQuery(strQuery);
+		metricToCiGr.query();
+
+		while (metricToCiGr.next()) {
+			var resource = {};
+			resource.resourceName= metricToCiGr.getDisplayValue("resource_id");
+			resource.metricName = metricToCiGr.metric_type_id.metric_type_tiny_name.toString();
+			resources.push(resource);
+		}
+		
+		return resources;
+	},
+	getAllMetricsByCi: function (ciId) {
+		var metrics = [];
+		var metricToCiGr = new GlideRecord('sa_metric_map');
+		metricToCiGr.addQuery("cmdb_ci", ciId);
+		metricToCiGr.addNullQuery("resource_id");
+		metricToCiGr.query();
+		while (metricToCiGr.next()) {
+			var metric = metricToCiGr.metric_type_id.metric_type_tiny_name.toString();
+			metrics.push(metric);
+		}
+		return metrics;
+	},
+	getMetricIdsByCi: function (ciId,chosen_metrics) {
+		var metrics = [];
+		var metricToCiGr = new GlideRecord('sa_metric_map');
+		metricToCiGr.addQuery("cmdb_ci", ciId);
+		if (chosen_metrics != "") {
+			metricToCiGr.addEncodedQuery("metric_type_idIN" + chosen_metrics);
+		}
+		metricToCiGr.addNullQuery("resource_id");
+		metricToCiGr.query();
+		while (metricToCiGr.next()) {
+			var obj = {};
+			obj.metricId = metricToCiGr.getValue("metric_type_id");
+			obj.metricName = metricToCiGr.metric_type_id.metric_type_tiny_name.toString();
+			obj.ciId = metricToCiGr.getValue("cmdb_ci");
+			obj.ciName = metricToCiGr.getDisplayValue("cmdb_ci");
+			metrics.push(obj);
+		}
+		return metrics;
+	},
+	convertSysCreatedStrToMS: function (timeStr) {
+		var gdt = new GlideDateTime();
+		gdt.setValue(timeStr);
+		return gdt.getNumericValue();
+	},
+	isRegEx: function(str) {
+		if((str.charAt(0)=='/') && (str.charAt(str.length-1)=='/'))
+			return true;
+
+		return false;
+	},
+	getValuesByNameMatch: function (matchStr,seperator) {
+		var values = [];
+		if(this.isRegEx(matchStr)) {
+			matchStr=matchStr.substring(1, matchStr.length - 1);
+			if (matchStr.charAt(0) == "(")
+				matchStr = matchStr.substring(1, matchStr.length - 1);
+		}
+			
+		values = matchStr.split(seperator);
+		return values;
+	},
+	isMatchAll: function (input) {
+		if(input=='*'  || input=='\*' || input=='\.*\\')
+			return true;
+
+		return false;
+	},
+	findNthIndex: function (string, match, n) {
+		var L = string.length, i = -1;
+		while(n-- && i++ < L){
+			i = string.indexOf(match, i);
+			if (i < 0) break;
+		}
+		return i;
+	},
+	convertRecordToJSON: function (gr, stringify) {
+		var fields = new GlideRecordUtil().getFields(gr);
+		fields.sort();
+		
+		var recordObj = {};
+			
+		for(var field in fields) {
+			var type = gr.getElement(fields[field]).getED().getInternalType();
+
+			recordObj[fields[field] + ":" + "display:" + type] = gr.getDisplayValue(fields[field]);
+			recordObj[fields[field] + ":" + "value:" + type] = gr.getValue(fields[field]);
+			/*if(type == 'boolean' || type == 'journal_input'){
+				recordObj[fields[field]] = gr.getDisplayValue(fields[field]);
+			} else {
+				recordObj[fields[field]] = gr.getValue(fields[field]);
+			}*/
+		}
+		return stringify == true ? JSON.stringify(recordObj) : recordObj;
+	},
+	createTagSysparam: function (tagString, field) {
+		var returnString = "";
+		var tagArray = tagString.split(",");
+		for (var t = 0; t < tagArray.length; t++) {
+			var tag = tagArray[t].split("=");
+			var key = tag[0];
+			var value = tag[1];
+			var seperator = '^OR';
+			returnString += seperator + field + 'LIKE"' + key + '": "' + value + '"';
+		}
+		returnString = returnString.substring(3);
+		return returnString;
+	},
+	getImpactedServicesForAlert: function(alertId) {
+        var cis = this.getTheCIsOfMyGroup(alertId);
+        var alertManager = new SNC.AlertManager();
+        return alertManager.getImpactedServicesByCis(cis);
+    },
+	getTheCIsOfMyGroup: function(alertId) {
+        // we are only interested in CIs of the alert and below (up to 2 levels)
+        // split to 2 queries for better performance
+        // in the 1st query we can't use group by CI since we need Role field
+        // in the 1st query we can't use CI not empty filter since alerts on top or middle levels can have empty CI
+        // 1st query (alert itself and his direct children)
+        var allAlertCis = new GlideAggregate("em_alert");
+        allAlertCis.addQuery("sys_id", alertId)
+            .addOrCondition("parent", alertId);
+        allAlertCis.query();
+        var cisOfAlertsInGroup = [];
+        var bothAlerts = [];
+        while (allAlertCis.next()) {
+            var ci = allAlertCis.getValue("cmdb_ci");
+            if (ci) {
+                cisOfAlertsInGroup.push(ci);
+            }
+            var role = allAlertCis.getValue("correlation_group");
+            if (role == 3) {
+                var sysId = allAlertCis.getValue("sys_id");
+                bothAlerts.push(sysId);
+            }
+        }
+        // 2nd query (grandchildren) - only if really needed
+        if (bothAlerts.length > 0) {
+            allAlertCis = new GlideAggregate("em_alert");
+            allAlertCis.addQuery("parent", "IN", bothAlerts);
+            allAlertCis.addQuery("cmdb_ci", "!=", null);
+            allAlertCis.groupBy("cmdb_ci");
+            allAlertCis.query();
+            while (allAlertCis.next()) {
+                ci = allAlertCis.getValue("cmdb_ci");
+                cisOfAlertsInGroup.push(ci);
+            }
+        }
+        // remove duplicate CIs since we could not use group by CI
+        return this.uniq(cisOfAlertsInGroup);
+    },
+
+    type: 'GrafanaAPIBackend'
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>bstill-routley</sys_created_by>
+        <sys_created_on>2022-01-05 19:30:47</sys_created_on>
+        <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>GrafanaAPIBackend</sys_name>
+        <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
+        <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
+        <sys_updated_by>bstill-routley</sys_updated_by>
+        <sys_updated_on>2022-01-05 21:46:26</sys_updated_on>
+    </sys_script_include>
+</record_update>

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ws_operation">
+    <sys_ws_operation action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <consumes>application/json,application/xml,text/xml</consumes>
+        <consumes_customized>false</consumes_customized>
+        <default_operation_uri/>
+        <enforce_acl>cf9d01d3e73003009d6247e603f6a990</enforce_acl>
+        <http_method>POST</http_method>
+        <name>V1-Query-Row_Count</name>
+        <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
+	var tableName = "";
+	var sysparam = "";
+	
+	if (request.body.data.targets[0].target)
+		tableName = request.body.data.targets[0].target;
+	if (request.body.data.targets[0].sysparm)
+		sysparam = request.body.data.targets[0].sysparm;
+	
+	var queryParams = request.queryParams;
+	var endTimeInput=queryParams.endTime;
+	var startTimeInput=queryParams.startTime;
+	var timerangeColumn=queryParams.timerangeColumn;
+	
+	response.setContentType('application/json');
+    response.setStatus(200);
+	var writer = response.getStreamWriter();
+	var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
+	
+	var tableResponse=metricData.getQueryRowCount(tableName, sysparam, startTimeInput, endTimeInput, timerangeColumn);
+	writer.writeString(tableResponse);
+
+})(request, response);]]></operation_script>
+        <operation_uri>/api/x_opti8_itom_grafa/grafana_api/v1/query/row_count</operation_uri>
+        <produces>application/json,application/xml,text/xml</produces>
+        <produces_customized>false</produces_customized>
+        <relative_path>/v1/query/row_count</relative_path>
+        <request_example/>
+        <requires_acl_authorization>true</requires_acl_authorization>
+        <requires_authentication>true</requires_authentication>
+        <requires_snc_internal_role>true</requires_snc_internal_role>
+        <short_description/>
+        <sys_class_name>sys_ws_operation</sys_class_name>
+        <sys_created_by>bstill-routley</sys_created_by>
+        <sys_created_on>2022-01-05 20:01:42</sys_created_on>
+        <sys_id>355d34721b348990ba4d15c61a4bcbf4</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>V1-Query-Row_Count</sys_name>
+        <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
+        <sys_update_name>sys_ws_operation_355d34721b348990ba4d15c61a4bcbf4</sys_update_name>
+        <sys_updated_by>bstill-routley</sys_updated_by>
+        <sys_updated_on>2022-01-05 20:08:00</sys_updated_on>
+        <web_service_definition display_value="Grafana API">e579f07e1bf08990ba4d15c61a4bcb4f</web_service_definition>
+        <web_service_version/>
+    </sys_ws_operation>
+</record_update>
