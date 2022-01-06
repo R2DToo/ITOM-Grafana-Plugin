@@ -32,7 +32,10 @@
 	var queryParams = request.queryParams;
 	var endTimeInput=queryParams.endTime;
 	var startTimeInput=queryParams.startTime;
-	var timerangeColumn=queryParams.timerangeColumn;
+	var timerangeColumn="sys_updated_on";
+	if (queryParams.timerangeColumn) {
+		timerangeColumn = queryParams.timerangeColumn;
+	}
 	
 	response.setContentType('application/json');
 	var writer = response.getStreamWriter();
@@ -61,14 +64,14 @@
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:57:00</sys_created_on>
         <sys_id>3b3c70321b348990ba4d15c61a4bcb86</sys_id>
-        <sys_mod_count>3</sys_mod_count>
+        <sys_mod_count>4</sys_mod_count>
         <sys_name>V1-Query-Aggregate</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy/>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_ws_operation_3b3c70321b348990ba4d15c61a4bcb86</sys_update_name>
         <sys_updated_by>bstill-routley</sys_updated_by>
-        <sys_updated_on>2022-01-05 22:02:18</sys_updated_on>
+        <sys_updated_on>2022-01-06 16:27:43</sys_updated_on>
         <web_service_definition display_value="Grafana API">e579f07e1bf08990ba4d15c61a4bcb4f</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>
