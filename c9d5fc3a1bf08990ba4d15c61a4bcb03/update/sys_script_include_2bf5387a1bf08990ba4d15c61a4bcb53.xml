@@ -846,7 +846,7 @@ GrafanaAPIBackend.prototype = {
 			return e;
 		}
 	},
-	getAlerts: function(ciId, alertType, alertState, sysparam, limit, page, sortBy, startTime, endTime, timerangeColumn, tagFilters) {
+	getAlerts: function(ciId, alertType, alertState, sysparam, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn, tagFilters) {
 		var dataStr="";
 		var alertStateFilter="Open,Reopen";
 		if (alertState == "All")
@@ -867,7 +867,7 @@ GrafanaAPIBackend.prototype = {
 		}
 		
 		for(var i=0;i<cis.length;i++) {
-			var alertsbyCI=this.getAlertsByCI(cis[i],alertStateFilter,sysparam_query, limit, page, sortBy, startTime, endTime, timerangeColumn, tagSysparam);
+			var alertsbyCI=this.getAlertsByCI(cis[i],alertStateFilter,sysparam_query, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn, tagSysparam);
 			if (alertsbyCI.length > 0)
 				dataStr += alertsbyCI + ",";
 		}
@@ -1523,7 +1523,7 @@ GrafanaAPIBackend.prototype = {
 		changeStr = changeStr.substring(0, changeStr.length - 1);
 		return changeStr;
 	},
-	getAlertsByCI: function (ciId, filter, query, limit, page, sortBy, startTime, endTime, timerangeColumn, tagSysparam) {
+	getAlertsByCI: function (ciId, filter, query, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn, tagSysparam) {
 		if (startTime && endTime) {
 			var start = new GlideDateTime();
 			start.subtract(start.getNumericValue());// gets the date to 0
@@ -1559,7 +1559,13 @@ GrafanaAPIBackend.prototype = {
 		}
 		alertGr.setLimit(limit);
 		alertGr.chooseWindow(pageWindow[0], pageWindow[1]);
-		alertGr.orderBy(sortBy);
+		if (sortBy != "") {
+			if (sortDirection == "ASC") {
+				tableGR.orderBy(sortBy);
+			} else {
+				tableGR.orderByDesc(sortBy);
+			}
+		}
 		alertGr.query();
 		var alertsStr="";
 		
@@ -1633,7 +1639,7 @@ GrafanaAPIBackend.prototype = {
 			alert.impactedServicesCount = alertGr.getValue('sn_services');
 			alert.impactedServices = "";
 			if (alert.impactedServicesCount > 0) {
-				var impactedSysIDs = new this.getImpactedServicesForAlert(alert.sys_id);
+				var impactedSysIDs = new global.EvtMgmtAlertsInGroupAPI().getImpactedServicesForAlert(alert.sys_id);
 				var endSubstring = this.findNthIndex(impactedSysIDs, ",", 3);
 				if (endSubstring == -1) {
 					endSubstring = impactedSysIDs.length;
@@ -1773,51 +1779,9 @@ GrafanaAPIBackend.prototype = {
 			returnString += seperator + field + 'LIKE"' + key + '": "' + value + '"';
 		}
 		returnString = returnString.substring(3);
+		gs.info("tagSysparam: " + returnString, "itomgrafanabackend");
 		return returnString;
 	},
-	getImpactedServicesForAlert: function(alertId) {
-        var cis = this.getTheCIsOfMyGroup(alertId);
-        var alertManager = new SNC.AlertManager();
-        return alertManager.getImpactedServicesByCis(cis);
-    },
-	getTheCIsOfMyGroup: function(alertId) {
-        // we are only interested in CIs of the alert and below (up to 2 levels)
-        // split to 2 queries for better performance
-        // in the 1st query we can't use group by CI since we need Role field
-        // in the 1st query we can't use CI not empty filter since alerts on top or middle levels can have empty CI
-        // 1st query (alert itself and his direct children)
-        var allAlertCis = new GlideAggregate("em_alert");
-        allAlertCis.addQuery("sys_id", alertId)
-            .addOrCondition("parent", alertId);
-        allAlertCis.query();
-        var cisOfAlertsInGroup = [];
-        var bothAlerts = [];
-        while (allAlertCis.next()) {
-            var ci = allAlertCis.getValue("cmdb_ci");
-            if (ci) {
-                cisOfAlertsInGroup.push(ci);
-            }
-            var role = allAlertCis.getValue("correlation_group");
-            if (role == 3) {
-                var sysId = allAlertCis.getValue("sys_id");
-                bothAlerts.push(sysId);
-            }
-        }
-        // 2nd query (grandchildren) - only if really needed
-        if (bothAlerts.length > 0) {
-            allAlertCis = new GlideAggregate("em_alert");
-            allAlertCis.addQuery("parent", "IN", bothAlerts);
-            allAlertCis.addQuery("cmdb_ci", "!=", null);
-            allAlertCis.groupBy("cmdb_ci");
-            allAlertCis.query();
-            while (allAlertCis.next()) {
-                ci = allAlertCis.getValue("cmdb_ci");
-                cisOfAlertsInGroup.push(ci);
-            }
-        }
-        // remove duplicate CIs since we could not use group by CI
-        return this.uniq(cisOfAlertsInGroup);
-    },
 
     type: 'GrafanaAPIBackend'
 };]]></script>
@@ -1825,13 +1789,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>2</sys_mod_count>
+        <sys_mod_count>12</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>bstill-routley</sys_updated_by>
-        <sys_updated_on>2022-01-05 21:46:26</sys_updated_on>
+        <sys_updated_on>2022-01-06 21:07:51</sys_updated_on>
     </sys_script_include>
 </record_update>
