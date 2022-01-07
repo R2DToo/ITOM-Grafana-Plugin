@@ -872,7 +872,7 @@ GrafanaAPIBackend.prototype = {
 			dataStr=dataStr.substring(0, dataStr.length - 1);
 		return '['+dataStr+"]";
 	},
-	getChanges: function (ciId, alertType, sysparam, limit, page, startTime, endTime, timerangeColumn) {
+	getChanges: function (ciId, alertType, sysparam, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn) {
 		var dataStr = "";
 		var sysparam_query="";
 		if (sysparam != "")
@@ -886,7 +886,7 @@ GrafanaAPIBackend.prototype = {
 			cis=[""];
 		
 		for(var i=0;i<cis.length;i++) {
-			var changesByCI=this.getChangesByCI(cis[i], sysparam_query, limit, page, startTime, endTime, timerangeColumn);
+			var changesByCI=this.getChangesByCI(cis[i], sysparam_query, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn);
 			if (changesByCI.length > 0)
 				dataStr += changesByCI + ",";
 		}
@@ -1474,7 +1474,7 @@ GrafanaAPIBackend.prototype = {
         }
         return cis;
 	},
-	getChangesByCI: function (ciId, sysparam_query, limit, page, startTime, endTime, timerangeColumn) {
+	getChangesByCI: function (ciId, sysparam_query, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn) {
 		if (startTime && endTime) {
 			var start = new GlideDateTime();
 			start.subtract(start.getNumericValue());// gets the date to 0
@@ -1495,6 +1495,13 @@ GrafanaAPIBackend.prototype = {
 		}
 		changeGr.setLimit(limit);
 		changeGr.chooseWindow(pageWindow[0], pageWindow[1]);
+		if (sortBy != "") {
+			if (sortDirection == "ASC") {
+				changeGr.orderBy(sortBy);
+			} else {
+				changeGr.orderByDesc(sortBy);
+			}
+		}
 		changeGr.query();
 		var changeStr = "";
 		while (changeGr.next()) {
@@ -1785,13 +1792,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>16</sys_mod_count>
+        <sys_mod_count>17</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>bstill-routley</sys_updated_by>
-        <sys_updated_on>2022-01-07 20:15:50</sys_updated_on>
+        <sys_updated_on>2022-01-07 20:31:17</sys_updated_on>
     </sys_script_include>
 </record_update>
