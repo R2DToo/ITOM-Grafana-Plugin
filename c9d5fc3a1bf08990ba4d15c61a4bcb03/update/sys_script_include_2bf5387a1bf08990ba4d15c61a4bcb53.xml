@@ -616,7 +616,7 @@ GrafanaAPIBackend.prototype = {
 		}
 		return JSON.stringify(returnArray);
 	},
-	getMetrics: function (ciId, startTimeInput, endTimeInput, sysparam) {
+	getMetrics: function (ciId, startTimeInput, endTimeInput) {
 		var metricStr = "";
 		var startTime = new GlideDateTime();
 		startTime.subtract(startTime.getNumericValue());// gets the date to 0
@@ -637,8 +637,6 @@ GrafanaAPIBackend.prototype = {
 				//ciTable is a table with metric fields.
 				var metricTableGr = new GlideRecord(ciTable);
 				metricTableGr.addQuery("sys_id", cis[c]);
-				if (sysparam != "")
-					metricTableGr.addEncodedQuery(sysparam);
 				metricTableGr.query();
 				try {
 					var metrics = this.getAllMetricsByCi(cis[c]);  // TODO: get from clotho instead of metric to ci table
@@ -693,7 +691,7 @@ GrafanaAPIBackend.prototype = {
 				metricStr = metricStr.substring(0, metricStr.length - 1);
 		return "[" + metricStr + "]";
 	},
-	getSingleMetric: function(ciIdMatch, metricIdMatch, resourceNameMatch,startTimeInput,endTimeInput,sysparam) {
+	getSingleMetric: function(ciIdMatch, metricIdMatch, resourceNameMatch,startTimeInput,endTimeInput) {
 		var startTime = new GlideDateTime();
 		startTime.subtract(startTime.getNumericValue());// gets the date to 0
 		startTime.add(startTimeInput);
@@ -727,7 +725,7 @@ GrafanaAPIBackend.prototype = {
 					
 					for(var r=0;r<resourceObjs.length;r++)
 					{
-						var returnMetricStr=this.getSingleMetricStr(ciIds[c], resourceObjs[r].metricName, resourceObjs[r].resourceName, startTime, endTime, sysparam);
+						var returnMetricStr=this.getSingleMetricStr(ciIds[c], resourceObjs[r].metricName, resourceObjs[r].resourceName, startTime, endTime);
 						if(returnMetricStr.length>0)
 						{
 							metricDataStr+=returnMetricStr;
@@ -741,7 +739,7 @@ GrafanaAPIBackend.prototype = {
 			metricDataStr=metricDataStr.substring(0, metricDataStr.length - 1);
 		return '['+metricDataStr+"]";
 	},
-	getSingleMetricStr: function (ciId, metric_name, resourceName, startTime, endTime, sysparam) {
+	getSingleMetricStr: function (ciId, metric_name, resourceName, startTime, endTime) {
 		var ciGr = new GlideRecord("cmdb_ci");
 		//get table name
 		var ciTable;
@@ -770,8 +768,6 @@ GrafanaAPIBackend.prototype = {
 		}
 		var metricTableGr = new GlideRecord(ciTable);
 		metricTableGr.addQuery("sys_id", metricResourceId);
-		if (sysparam!="")
-			metricTableGr.addEncodedQuery(sysparam);
 		metricTableGr.query();
 		try {
 			//build a transform that returns a simple average
@@ -808,7 +804,7 @@ GrafanaAPIBackend.prototype = {
 		}
 		return JSON.stringify(dataSet);
 	},
-	getAnomalyMetrics: function (ciId, metricId, resourceNameMatch, startTimeInput, endTimeInput, sysparam) {
+	getAnomalyMetrics: function (ciId, metricId, resourceNameMatch, startTimeInput, endTimeInput) {
 		try {
 			var returnValues = [];
 			var startTime = new GlideDateTime();
@@ -1789,13 +1785,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>13</sys_mod_count>
+        <sys_mod_count>16</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>bstill-routley</sys_updated_by>
-        <sys_updated_on>2022-01-06 21:18:50</sys_updated_on>
+        <sys_updated_on>2022-01-07 20:15:50</sys_updated_on>
     </sys_script_include>
 </record_update>
