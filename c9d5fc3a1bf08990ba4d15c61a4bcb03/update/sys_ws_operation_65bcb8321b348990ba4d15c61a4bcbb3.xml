@@ -26,14 +26,18 @@
 	response.setContentType('application/json');
     
 	var writer = response.getStreamWriter();
-	if (ciId != "") {
+	if (ciId == "") {
+		response.setError(new sn_ws_err.BadRequestError("CI not provided"));
+	} else if (!endTimeInput) {
+		response.setError(new sn_ws_err.BadRequestError("End Time not provided"));
+	} else if (!startTimeInput) {
+		response.setError(new sn_ws_err.BadRequestError("Start Time not provided"));
+	} else {
 		response.setStatus(200);
 		var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
 
 		var metricValues=metricData.getAnomalyMetrics(ciId,metricId,resourceName,startTimeInput,endTimeInput);
 		writer.writeString(metricValues);
-	} else {
-		response.setError(new sn_ws_err.BadRequestError("CI not provided"));
 	}
 	
 	
@@ -51,14 +55,14 @@
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:58:55</sys_created_on>
         <sys_id>65bcb8321b348990ba4d15c61a4bcbb3</sys_id>
-        <sys_mod_count>2</sys_mod_count>
+        <sys_mod_count>3</sys_mod_count>
         <sys_name>V1-Query-Anomaly_Metrics</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy/>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_ws_operation_65bcb8321b348990ba4d15c61a4bcbb3</sys_update_name>
         <sys_updated_by>bstill-routley</sys_updated_by>
-        <sys_updated_on>2022-01-07 20:01:39</sys_updated_on>
+        <sys_updated_on>2022-01-10 17:49:17</sys_updated_on>
         <web_service_definition display_value="Grafana API">e579f07e1bf08990ba4d15c61a4bcb4f</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>
