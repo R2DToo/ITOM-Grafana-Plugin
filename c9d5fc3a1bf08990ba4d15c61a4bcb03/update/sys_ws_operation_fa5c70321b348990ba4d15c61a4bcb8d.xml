@@ -10,7 +10,7 @@
         <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
 	var ciId="";
 	var sysparam_query="";
-	var alertType="service";
+	var alertType="none";
 	var alertState ="All";
 	var limit = 9999;
 	var page = 0;
@@ -49,26 +49,33 @@
 	}
 	
 	response.setContentType('application/json');
-    response.setStatus(200);
 	var writer = response.getStreamWriter();
 	
-	var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
-    var metricValues=metricData.getAlerts(
-		ciId, 
-		alertType, 
-		alertState, 
-		sysparam_query, 
-		limit, 
-		page, 
-		sortBy,
-		sortDirection,
-		startTimeInput, 
-		endTimeInput,
-		timerangeColumn,
-		tagFilters
-	);
+	if (alertType == "") {
+		response.setError(new sn_ws_err.BadRequestError("Alert type not provided"));
+	} else if (alertState == "") {
+		response.setError(new sn_ws_err.BadRequestError("Alert state not provided"));
+	} else {
+		response.setStatus(200);
+		var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
+		var metricValues=metricData.getAlerts(
+			ciId, 
+			alertType, 
+			alertState, 
+			sysparam_query, 
+			limit, 
+			page, 
+			sortBy,
+			sortDirection,
+			startTimeInput, 
+			endTimeInput,
+			timerangeColumn,
+			tagFilters
+		);
+
+		writer.writeString(metricValues);
+	}
 	
-	writer.writeString(metricValues);
 })(request, response);]]></operation_script>
         <operation_uri>/api/x_opti8_itom_grafa/grafana_api/v1/query/alerts</operation_uri>
         <produces>application/json,application/xml,text/xml</produces>
@@ -83,14 +90,14 @@
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:57:35</sys_created_on>
         <sys_id>fa5c70321b348990ba4d15c61a4bcb8d</sys_id>
-        <sys_mod_count>3</sys_mod_count>
+        <sys_mod_count>5</sys_mod_count>
         <sys_name>V1-Query-Alerts</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy/>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_ws_operation_fa5c70321b348990ba4d15c61a4bcb8d</sys_update_name>
         <sys_updated_by>bstill-routley</sys_updated_by>
-        <sys_updated_on>2022-01-06 21:02:31</sys_updated_on>
+        <sys_updated_on>2022-01-17 14:56:24</sys_updated_on>
         <web_service_definition display_value="Grafana API">e579f07e1bf08990ba4d15c61a4bcb4f</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>
