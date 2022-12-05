@@ -864,7 +864,7 @@ GrafanaAPIBackend.prototype = {
 			return e;
 		}
 	},
-	getAlerts: function(ciId, alertType, alertState, sysparam, limit, page, sortBy, startTime, endTime, timerangeColumn, tagFilters) {
+	getAlerts: function(ciId, alertType, alertState, sysparam, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn, tagFilters) {
 		var dataStr="";
 		var alertStateFilter="Open,Reopen";
 		if (alertState == "All")
@@ -885,7 +885,7 @@ GrafanaAPIBackend.prototype = {
 		}
 		
 		for(var i=0;i<cis.length;i++) {
-			var alertsbyCI=this.getAlertsByCI(cis[i],alertStateFilter,sysparam_query, limit, page, sortBy, startTime, endTime, timerangeColumn, tagSysparam);
+			var alertsbyCI=this.getAlertsByCI(cis[i],alertStateFilter,sysparam_query, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn, tagSysparam);
 			if (alertsbyCI.length > 0)
 				dataStr += alertsbyCI + ",";
 		}
@@ -893,28 +893,6 @@ GrafanaAPIBackend.prototype = {
 		if(dataStr.charAt(dataStr.length - 1)==',')
 			dataStr=dataStr.substring(0, dataStr.length - 1);
 		return '['+dataStr+"]";
-	},
-	getChanges: function (ciId, alertType, sysparam, limit, page, startTime, endTime, timerangeColumn) {
-		var dataStr = "";
-		var sysparam_query="";
-		if (sysparam != "")
-			sysparam_query = sysparam;
-		var cis =[];
-		if(alertType=="service")
-			cis = this.getAllCIsInService(ciId);
-		else if (alertType=="ci")
-			cis = this.getValuesByNameMatch(ciId, "|");
-		else if (alertType=="none")
-			cis=[""];
-		
-		for(var i=0;i<cis.length;i++) {
-			var changesByCI=this.getChangesByCI(cis[i], sysparam_query, limit, page, startTime, endTime, timerangeColumn);
-			if (changesByCI.length > 0)
-				dataStr += changesByCI + ",";
-		}
-		if (dataStr.charAt(dataStr.length - 1) == ",")
-			dataStr = dataStr.substring(0, dataStr.length - 1);
-		return "[" + dataStr + "]";
 	},
 	getTopology: function (serviceId, childDepth, parentDepth, sysparam_query) {
 		var excludedClasses = 'dscy_route_next_hop,cmdb_ci_memory_module,cmdb_ci_disk,cmdb_ci_disk_partition,cmdb_ci_config_file_tracked,	cmdb_ci_ip_address,dscy_router_interface,cmdb_ci_network_adapter,dscy_route_interface,cmdb_ci_file_system,cmdb_ci_lvm_pool,	cmdb_ci_storage_device,cmdb_ci_nas_file_system,cmdb_ci_os_packages,sys_package,cmdb_ci_storage_pool,cmdb_ci_patches,cmdb_ci_endpoint_manual';
@@ -1467,52 +1445,7 @@ GrafanaAPIBackend.prototype = {
         }
         return cis;
 	},
-	getChangesByCI: function (ciId, sysparam_query, limit, page, startTime, endTime, timerangeColumn) {
-		if (startTime && endTime) {
-			var start = new GlideDateTime();
-			start.subtract(start.getNumericValue());// gets the date to 0
-			start.add(startTime);
-
-			var end = new GlideDateTime();
-			end.subtract(end.getNumericValue());
-			end.add(endTime);
-		}
-		var pageWindow = this.getPageWindow(limit, page);
-		var changeGr = new GlideRecordSecure('change_request');
-		if (ciId != "")
-			changeGr.addQuery("cmdb_ci", ciId);
-		if (sysparam_query != "")
-			changeGr.addEncodedQuery(sysparam_query);
-		if (startTime && endTime) {
-			changeGr.addEncodedQuery(timerangeColumn + 'BETWEEN' + start + '@' + end);
-		}
-		changeGr.setLimit(limit);
-		changeGr.chooseWindow(pageWindow[0], pageWindow[1]);
-		changeGr.query();
-		var changeStr = "";
-		while (changeGr.next()) {
-			var change = new Object();
-			change.active = changeGr.getDisplayValue("active");
-			change.changeId = changeGr.getValue("number");
-			change.CI = changeGr.getDisplayValue("cmdb_ci");
-			change.service = changeGr.getDisplayValue("business_service");
-			change.state = changeGr.getDisplayValue("state");
-			change.escalation = changeGr.getValue("escalation");
-			change.urgency = changeGr.getDisplayValue("urgency");
-			change.impact = changeGr.getDisplayValue("impact");
-			change.short_description = changeGr.getDisplayValue("short_description");
-			change.created_on = changeGr.getDisplayValue("sys_created_on");
-			change.opened_at = changeGr.getDisplayValue("opened_at");
-			change.type = changeGr.getDisplayValue("type");
-			change.category = changeGr.getDisplayValue("category");
-			change.start_time = this.convertSysCreatedStrToMS(changeGr.getValue("sys_created_on"));
-			var jsonString = JSON.stringify(change);
-			changeStr += jsonString + ",";
-		}
-		changeStr = changeStr.substring(0, changeStr.length - 1);
-		return changeStr;
-	},
-	getAlertsByCI: function (ciId, filter, query, limit, page, sortBy, startTime, endTime, timerangeColumn, tagSysparam) {
+	getAlertsByCI: function (ciId, filter, query, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn, tagSysparam) {
 		if (startTime && endTime) {
 			var start = new GlideDateTime();
 			start.subtract(start.getNumericValue());// gets the date to 0
@@ -1548,7 +1481,13 @@ GrafanaAPIBackend.prototype = {
 		}
 		alertGr.setLimit(limit);
 		alertGr.chooseWindow(pageWindow[0], pageWindow[1]);
-		alertGr.orderBy(sortBy);
+		if (sortBy != "") {
+			if (sortDirection == "ASC") {
+				tableGR.orderBy(sortBy);
+			} else {
+				tableGR.orderByDesc(sortBy);
+			}
+		}
 		alertGr.query();
 		var alertsStr="";
 		
@@ -1815,13 +1754,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>36</sys_mod_count>
+        <sys_mod_count>40</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>bstill-routley</sys_updated_by>
-        <sys_updated_on>2022-11-24 16:26:56</sys_updated_on>
+        <sys_updated_on>2022-12-05 20:00:06</sys_updated_on>
     </sys_script_include>
 </record_update>
