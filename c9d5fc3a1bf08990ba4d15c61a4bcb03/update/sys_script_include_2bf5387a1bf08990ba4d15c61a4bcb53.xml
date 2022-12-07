@@ -835,18 +835,16 @@ GrafanaAPIBackend.prototype = {
 			for(var c=0;c<ciIds.length;c++) {
 				var metricIds = this.getMetricIdsByCi(ciIds[c],chosen_metrics);
 				for(var m = 0; m < metricIds.length; m++) {
-					var anomalyMetricData = new SNC.MetricScriptableApis();
-					var metricDataStr = anomalyMetricData.getMetricData(
+					var metricDataObj = this.queryAnomalyMetric(
 						ciIds[c],
-						startTime.getNumericValue(),
-						endTime.getNumericValue(),
 						metricIds[m].metricId,
-						""//Resource ID is not being used
+						startTime.getNumericValue(),
+						endTime.getNumericValue()
 					);
 					var obj = {};
-					obj.ciName = metricIds[m].ciName;
-					obj.metricName = metricIds[m].metricName;
-					obj.data = JSON.parse(metricDataStr);
+					obj.ci_name = metricIds[m].ciName;
+					obj.metric_name = metricIds[m].metricName;
+					obj.data = metricDataObj;
 					returnValues.push(obj);
 				}
 			}
@@ -855,6 +853,74 @@ GrafanaAPIBackend.prototype = {
 		} catch (e) {
 			return e;
 		}
+	},
+	queryAnomalyMetric: function (ci_id, metric_name, start_time, end_time) {
+		var ciGr = new GlideRecordSecure("cmdb_ci");
+		var ci_table;
+		ciGr.addQuery("sys_id", ci_id);
+		ciGr.query();
+		if (ciGr.next()) {
+			ci_table = ciGr.getValue("sys_class_name");
+		}
+		
+		var metricTableGr = new GlideRecordSecure(ci_table);
+		metricTableGr.addQuery("sys_id", ci_id);
+		metricTableGr.query();
+		var dataSet = {};
+		
+		try {
+			//build a transform that returns a simple average
+			var builder = new sn_clotho.Transformer(metricTableGr);
+			builder.metric(metric_name).avg().label("AVG");
+			builder.metric(metric_name).max().label("MAX");
+			builder.metric(metric_name).min().label("MIN");
+
+			//execute transform and return result for visualization
+			var result = builder.execute(startTime, endTime);
+			
+			var avgData = result.getByLabel("AVG");
+			var maxData = result.getByLabel("MAX");
+			var minData = result.getByLabel("MIN");
+			
+			var timestamp = avgData.getStart().getNumericValue();
+			var period = avgData.getPeriod() * 1000;
+			
+			var avgValues = avgData.getValues();
+			var maxValues = maxData.getValues();
+			var minValues = minData.getValues();
+			
+			dataSet.length = avgValues.length;
+			dataSet.series = [
+				{
+					type: "AVG",
+					data: []
+				},
+				{
+					type: "MAX",
+					data: []
+				},
+				{
+					type: "MIN",
+					data: []
+				}
+			];
+			
+			for (var j = 0; j < dataSet.length; j++) {
+				var avgDataPoint = {time: timestamp, value: avgValues[j]};
+				var maxDataPoint = {time: timestamp, value: maxValues[j]};
+				var minDataPoint = {time: timestamp, value: minValues[j]};
+				
+				dataSet.series[0].data.push(avgDataPoint);
+				dataSet.series[1].data.push(maxDataPoint);
+				dataSet.series[2].data.push(minDataPoint);
+				
+				timestamp += period;
+			}
+			
+		} catch(err) {
+			return "";
+		}
+		return dataSet;
 	},
 	getAlerts: function(ciId, alertType, alertState, sysparam, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn, tagFilters) {
 		var dataStr="";
@@ -1746,13 +1812,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>44</sys_mod_count>
+        <sys_mod_count>45</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>bstill-routley</sys_updated_by>
-        <sys_updated_on>2022-12-07 19:03:33</sys_updated_on>
+        <sys_updated_on>2022-12-07 20:27:00</sys_updated_on>
     </sys_script_include>
 </record_update>
