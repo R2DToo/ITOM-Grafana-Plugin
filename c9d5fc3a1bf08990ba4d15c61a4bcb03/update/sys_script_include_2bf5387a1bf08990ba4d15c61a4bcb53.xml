@@ -457,22 +457,21 @@ GrafanaAPIBackend.prototype = {
 			}
 		}
 		logGr.query();
-		var rowCount = logGr.getRowCount();
 		while (logGr.next()) {
 			var log = {};
 			log.sys_created_on = this.convertSysCreatedStrToMS(logGr.getValue("time"));
+			log.log_message = logGr.getDisplayValue("log_message");
+			log.message = logGr.getDisplayValue("message");
 			if (compressLog) {
-				log.message = this.compressLog(logGr.getDisplayValue("raw_message"));
+				log.raw_message = this.compressLog(logGr.getDisplayValue("raw_message"));
 			} else {
-				log.message = logGr.getDisplayValue("raw_message");
+				log.raw_message = logGr.getDisplayValue("raw_message");
 			}
-			log.message_field = logGr.getDisplayValue("message");
 			log.application_service = logGr.getDisplayValue("application");
 			log.host = logGr.getDisplayValue("host");
 			log.level = logGr.getDisplayValue("level");
 			log.level = log.level.toLowerCase();
 			log.id = logGr.getValue("sys_id");
-			log.totalLogsReturned = rowCount;
 			returnArray.push(log);
 		}
 		return JSON.stringify(returnArray);
@@ -1754,13 +1753,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>41</sys_mod_count>
+        <sys_mod_count>43</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>bstill-routley</sys_updated_by>
-        <sys_updated_on>2022-12-05 20:34:00</sys_updated_on>
+        <sys_updated_on>2022-12-07 16:54:48</sys_updated_on>
     </sys_script_include>
 </record_update>
