@@ -11,6 +11,177 @@
 GrafanaAPIBackend.prototype = {
     initialize: function() {
     },
+	queryNodeGraph: function(starting_point_sys_id, search_parent_limit, search_child_limit, rel_types, excluded_classes) {
+		var hard_excluded_classes = [
+			"dscy_route_next_hop",
+			"cmdb_ci_memory_module",
+			"cmdb_ci_disk",
+			"cmdb_ci_disk_partition",
+			"cmdb_ci_config_file_tracked",
+			"cmdb_ci_ip_address",
+			"dscy_router_interface",
+			"cmdb_ci_network_adapter",
+			"dscy_route_interface",
+			"cmdb_ci_file_system",
+			"cmdb_ci_lvm_pool",
+			"cmdb_ci_storage_device",
+			"cmdb_ci_nas_file_system",
+			"cmdb_ci_os_packages",
+			"sys_package",
+			"cmdb_ci_storage_pool",
+			"cmdb_ci_patches",
+			"cmdb_ci_endpoint_manual"
+		];
+		var full_excluded_classes = hard_excluded_classes.concat(excluded_classes);
+		var next_parents = [starting_point_sys_id];
+		var next_children = [starting_point_sys_id];
+		var node_ids = [];
+		var response = {
+			nodes: [],
+			edges: [],
+			error: ""
+		};
+		try {
+			while (search_parent_limit > 0) {
+				while (next_parents.length > 0) {
+					var current_parent_search = next_parents.pop();
+					var parentGR = new GlideRecordSecure("cmdb_rel_ci");
+					parentGR.addQuery("child", current_parent_search);
+					if (rel_types.length > 0) {
+						parentGR.addQuery("type", "IN", rel_types.toString());
+					}
+					parentGR.addQuery("child.sys_class_name", "NOT IN", full_excluded_classes.toString());
+					parentGR.addQuery("parent.sys_class_name", "NOT IN", full_excluded_classes.toString());
+					parentGR.query();
+					while (parentGR.next()) {
+						var parent_id = parentGR.getValue("parent");
+						if (next_parents.indexOf(parent_id) == -1) {
+							next_parents.push(parent_id);
+						}
+						if (node_ids.indexOf(parent_id) == -1) {
+							node_ids.push(parent_id);
+							var parent_node = {
+								id: parent_id,
+								title: parentGR.getDisplayValue("parent"),
+								subtitle: parentGR.parent.sys_class_name.getDisplayValue()
+							};
+							response.nodes.push(parent_node);
+						}
+						var child_id = parentGR.getValue("child");
+						if (node_ids.indexOf(child_id) == -1) {
+							node_ids.push(child_id);
+							var child_node = {
+								id: child_id,
+								title: parentGR.getDisplayValue("child"),
+								subtitle: parentGR.child.sys_class_name.getDisplayValue()
+							};
+							response.nodes.push(child_node);
+						}
+						var edge = {
+							id: parent_id + "||" + child_id,
+							source: parent_id,
+							target: child_id,
+							mainstat: parentGR.getDisplayValue("type")
+						};
+						response.edges.push(edge);
+					}
+				}
+				search_parent_limit -= 1;
+			}
+			
+			while (search_child_limit > 0) {
+				while (next_children.length > 0) {
+					var current_child_search = next_children.pop();
+					var childGR = new GlideRecordSecure("cmdb_rel_ci");
+					childGR.addQuery("parent", current_child_search);
+					if (rel_types.length > 0) {
+						childGR.addQuery("type", "IN", rel_types.toString());
+					}
+					childGR.addQuery("child.sys_class_name", "NOT IN", full_excluded_classes.toString());
+					childGR.addQuery("parent.sys_class_name", "NOT IN", full_excluded_classes.toString());
+					childGR.query();
+					while (childGR.next()) {
+						var parent_id = childGR.getValue("parent");
+						if (node_ids.indexOf(parent_id) == -1) {
+							node_ids.push(parent_id);
+							var parent_node = {
+								id: parent_id,
+								title: childGR.getDisplayValue("parent"),
+								subtitle: childGR.parent.sys_class_name.getDisplayValue()
+							};
+							response.nodes.push(parent_node);
+						}
+						var child_id = childGR.getValue("child");
+						if (next_children.indexOf(child_id) == -1) {
+							next_children.push(child_id);
+						}
+						if (node_ids.indexOf(child_id) == -1) {
+							node_ids.push(child_id);
+							var child_node = {
+								id: child_id,
+								title: childGR.getDisplayValue("child"),
+								subtitle: childGR.child.sys_class_name.getDisplayValue()
+							};
+							response.nodes.push(child_node);
+						}
+						var edge = {
+							id: parent_id + "||" + child_id,
+							source: parent_id,
+							target: child_id,
+							mainstat: childGR.getDisplayValue("type")
+						};
+						response.edges.push(edge);
+					}
+				}
+				search_child_limit -= 1;
+			}
+			for (var x = 0; x < response.nodes.length; x++) {
+				response.nodes[x].arc__impact_clear = 0;
+				response.nodes[x].arc__impact_critical = 0;
+				response.nodes[x].arc__impact_major = 0;
+				response.nodes[x].arc__impact_minor = 0;
+				response.nodes[x].arc__impact_warning = 0;
+				response.nodes[x].arc__impact_ok = 0;
+				response.nodes[x].detail__impact = "Clear";
+				
+				var impact = this.getImpactStatusOfCI(response.nodes[x].id);
+				switch (impact) {
+					case 0:
+						response.nodes[x].arc__impact_clear = 1;
+						response.nodes[x].detail__impact = "Clear";
+						break;
+					case 1:
+						response.nodes[x].arc__impact_critical = 1;
+						response.nodes[x].detail__impact = "Critical";
+						break;
+					case 2:
+						response.nodes[x].arc__impact_major = 1;
+						response.nodes[x].detail__impact = "Major";
+						break;
+					case 3:
+						response.nodes[x].arc__impact_minor = 1;
+						response.nodes[x].detail__impact = "Minor";
+						break;
+					case 4:
+						response.nodes[x].arc__impact_warning = 1;
+						response.nodes[x].detail__impact = "Warning";
+						break;
+					case 5:
+						response.nodes[x].arc__impact_ok = 1;
+						response.nodes[x].detail__impact = "OK";
+						break;
+					default:
+						response.nodes[x].arc__impact_clear = 1;
+						response.nodes[x].detail__impact = "Clear";
+						break;
+				}
+			}
+		} catch (e) {
+			response.error = e.message;
+			return response;
+		}
+		return response;
+	},
 	queryUIActions: function (table, sysparam, sortBy, limit, page) {
 		var returnActions = [];
 		var pageWindow = this.getPageWindow(limit, page);
@@ -321,6 +492,7 @@ GrafanaAPIBackend.prototype = {
 		var glide = new GlideRecordSecure(table);
 		glide.addEncodedQuery(sysparam);
 		glide.setLimit(limit);
+		glide.orderBy(nameColumn);
 		glide.query();
 		while(glide.next()) {
 			var obj = {};
@@ -1812,13 +1984,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>48</sys_mod_count>
+        <sys_mod_count>78</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>bstill-routley</sys_updated_by>
-        <sys_updated_on>2022-12-07 20:58:02</sys_updated_on>
+        <sys_updated_on>2022-12-21 21:14:43</sys_updated_on>
     </sys_script_include>
 </record_update>
