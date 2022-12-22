@@ -1972,7 +1972,7 @@ GrafanaAPIBackend.prototype = {
 			impactGr.addEncodedQuery("vt_end>javascript:gs.endOfCurrentMinute()");
 			impactGr.query();
 			if (impactGr.next()) {
-				returnImpact = impactGr.getValue("severity");
+				returnImpact = parseInt(impactGr.getValue("severity"));
 			}
 		}
 		return returnImpact;
@@ -1984,13 +1984,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>78</sys_mod_count>
+        <sys_mod_count>79</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>bstill-routley</sys_updated_by>
-        <sys_updated_on>2022-12-21 21:14:43</sys_updated_on>
+        <sys_updated_on>2022-12-22 18:19:12</sys_updated_on>
     </sys_script_include>
 </record_update>
