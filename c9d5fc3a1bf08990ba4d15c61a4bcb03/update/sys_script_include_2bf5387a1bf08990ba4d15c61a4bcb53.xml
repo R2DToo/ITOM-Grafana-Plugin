@@ -11,6 +11,9 @@
 GrafanaAPIBackend.prototype = {
     initialize: function() {
     },
+	doesTableExist: function (table) {
+		return {tableExists: gs.tableExists(table)};
+	},
 	queryNodeGraph: function(starting_point_sys_id, search_parent_limit, search_child_limit, rel_types, excluded_classes) {
 		var hard_excluded_classes = [
 			"dscy_route_next_hop",
@@ -143,6 +146,12 @@ GrafanaAPIBackend.prototype = {
 				response.nodes[x].arc__impact_warning = 0;
 				response.nodes[x].arc__impact_ok = 0;
 				response.nodes[x].detail__impact = "Clear";
+				var count_alerts_response = this.getAggregate("em_alert", "state!=closed^cmdb_ci=" + response.nodes[x].id, "COUNT", "sys_id", "cmdb_ci", "1");
+				var count = 0;
+				if (count_alerts_response.length > 0) {
+					count = count_alerts_response[0].COUNT;
+				}
+				response.nodes[x].mainstat = count.toString() + " Active Alerts";
 				
 				var impact = this.getImpactStatusOfCI(response.nodes[x].id);
 				switch (impact) {
@@ -244,7 +253,7 @@ GrafanaAPIBackend.prototype = {
 		}
 		return JSON.stringify(anomalyValues);
 	},
-	getAllTableColumns: function (table, search) {
+	getAllTableColumns: function (table, search, typeFilter) {
 		// doubleDepthSearch is an experimental feature. Currently it's not supported by Grafana's select component
 		var doubleDepthSearch = false;
 		var columnArray = [];
@@ -254,6 +263,9 @@ GrafanaAPIBackend.prototype = {
 		if (search != "") {
 			columnGr.addEncodedQuery("column_labelLIKE" + search);
 		}
+		if (typeFilter != "") {
+			columnGr.addQuery("internal_type", "IN", typeFilter + ",reference");
+		}
 		columnGr.query();
 		while(columnGr.next()) {
 			var column = {};
@@ -261,12 +273,15 @@ GrafanaAPIBackend.prototype = {
 			column.value = columnGr.getDisplayValue("element");
 			column.type = columnGr.getDisplayValue("internal_type");
 			if (column.type == "Reference") {
-				columnArray.push({ label: column.label, value: column.value, type: column.type });
-				column.options = [];
+				//columnArray.push({ label: column.label, value: column.value, type: column.type });
+				column.options = [{ label: column.label, value: column.value, type: column.type }];
 				var referenceTable = columnGr.getValue("reference");
 				var nestedColumnGr = new GlideRecordSecure("sys_dictionary");
 				nestedColumnGr.addQuery("name", referenceTable);
 				nestedColumnGr.addEncodedQuery("element!=NULL");
+				if (typeFilter != "") {
+					nestedColumnGr.addQuery("internal_type", "IN", typeFilter);
+				}
 				nestedColumnGr.query();
 				while (nestedColumnGr.next()) {
 					var nestedObj = {};
@@ -592,8 +607,18 @@ GrafanaAPIBackend.prototype = {
 			}
 			var resultKeys = Object.keys(result[0]);
 			if (resultKeys.length == 0) {
-				result[0][key] = {datapoints: [[0, this.convertSysCreatedStrToMS(startTime)]]};
-				result[0][key].datapoints.push([0, this.convertSysCreatedStrToMS(endTime)]);
+				result[0][key] = {datapoints: []};
+				var intervalInSeconds = 60;
+				var timeDifference = GlideDateTime.subtract(startTime, endTime);
+				if (timeDifference.getDisplayValue().contains("Days")) {
+					intervalInSeconds = 60 * 60;
+				}
+				while (startTime <= endTime) {
+					result[0][key].datapoints.push([0, this.convertSysCreatedStrToMS(startTime)]);
+					startTime.addSeconds(intervalInSeconds);
+				}
+				//result[0][key] = {datapoints: [[0, this.convertSysCreatedStrToMS(startTime)]]};
+				//result[0][key].datapoints.push([0, this.convertSysCreatedStrToMS(endTime)]);
 			}
 			//result[0].datapoints.push([0, this.convertSysCreatedStrToMS(endTime)]);
 		}
@@ -778,7 +803,7 @@ GrafanaAPIBackend.prototype = {
 		var returnArray = [];
 		var tableGA = new GlideAggregate(table);
 		tableGA.addEncodedQuery(sysparam);
-		if (startTimeInput && endTimeInput) {
+		if (startTimeInput && endTimeInput && timerangeColumn) {
 			tableGA.addEncodedQuery(timerangeColumn + 'BETWEEN' + start + '@' + end);
 		}
 		tableGA.addAggregate(type, column);
@@ -792,7 +817,7 @@ GrafanaAPIBackend.prototype = {
 			returnArray.push(obj);
 			limit = limit - 1;
 		}
-		return JSON.stringify(returnArray);
+		return returnArray;
 	},
 	getMetrics: function (ciId, startTimeInput, endTimeInput, sysparam) {
 		var metricStr = "";
@@ -1028,7 +1053,7 @@ GrafanaAPIBackend.prototype = {
 	},
 	queryAnomalyMetric: function (ci_id, metric_name, start_time, end_time) {
 		var ciGr = new GlideRecordSecure("cmdb_ci");
-		var ci_table;
+		var ci_table = "";
 		ciGr.addQuery("sys_id", ci_id);
 		ciGr.query();
 		if (ciGr.next()) {
@@ -1053,6 +1078,25 @@ GrafanaAPIBackend.prototype = {
 			var avgData = result.getByLabel("AVG");
 			var maxData = result.getByLabel("MAX");
 			var minData = result.getByLabel("MIN");
+			
+			if (!avgData || !maxData || !minData) {
+				dataSet.length = 0;
+				dataSet.series = [
+					{
+						type: "AVG",
+						data: []
+					},
+					{
+						type: "MAX",
+						data: []
+					},
+					{
+						type: "MIN",
+						data: []
+					}
+				];
+				return dataSet;
+			}
 			
 			var timestamp = avgData.getStart().getNumericValue();
 			var period = avgData.getPeriod() * 1000;
@@ -1153,7 +1197,10 @@ GrafanaAPIBackend.prototype = {
 				var alertCount = 0;
 				var impact = 0;
 				impact = this.getImpactStatusOfCI(parentIds[0]);
-				alertCount = this.getAlertsCountByCI(parentIds[0],"","Open,Reopen");
+				var alertCountResponse = this.getAggregate("em_alert", "state!=closed^cmdb_ci=" + sys_id, "COUNT", "sys_id", "cmdb_ci", "1");
+				if (alertCountResponse.length > 0) {
+					alertCount = alertCountResponse[0].COUNT;
+				}
 				var childRow = '["' + className + "||" + classNameValue + '",' + 0 + ',"' + "Starting Point||0" + '","' + name + "||" + sys_id + '",' + impact + ',' + alertCount + '],';
 				topologyRows += childRow;
 			}
@@ -1184,7 +1231,10 @@ GrafanaAPIBackend.prototype = {
 						var alertCount = 0;
 						var impact = 0;
 						impact = this.getImpactStatusOfCI(parentObj.parent_id);
-						alertCount = this.getAlertsCountByCI(parentObj.parent_id,"","Open,Reopen");
+						var alertCountResponse = this.getAggregate("em_alert", "state!=closed^cmdb_ci=" + parentObj.parent_id, "COUNT", "sys_id", "cmdb_ci", "1");
+						if (alertCountResponse.length > 0) {
+							alertCount = alertCountResponse[0].COUNT;
+						}
 						var childRow = '["' + parentObj.parent_class + "||" + parentObj.parent_class_value + '",' + 0 + ',"' + parentObj.child_name + "||" + parentObj.child_id + '","' + parentObj.parent_name + "||" + parentObj.parent_id + '",' + impact + ',' + alertCount + '],';
 						topologyRows += childRow;
 						nextChildIds.push(parentObj.parent_id);
@@ -1224,7 +1274,10 @@ GrafanaAPIBackend.prototype = {
 						var alertCount = 0;
 						var impact = 0;
 						impact = this.getImpactStatusOfCI(childObj.child_id);
-						alertCount = this.getAlertsCountByCI(childObj.child_id,"","Open,Reopen");
+						var alertCountResponse = this.getAggregate("em_alert", "state!=closed^cmdb_ci=" + childObj.child_id, "COUNT", "sys_id", "cmdb_ci", "1");
+						if (alertCountResponse.length > 0) {
+							alertCount = alertCountResponse[0].COUNT;
+						}
 						var childRow = '["' + childObj.child_class + "||" + childObj.child_class_value + '",' + 0 + ',"' + childObj.parent_name + "||" + childObj.parent_id + '","' + childObj.child_name + "||" + childObj.child_id + '",' + impact + ',' + alertCount + '],';
 						topologyRows += childRow;
 						nextParentIds.push(childObj.child_id);
@@ -1499,18 +1552,6 @@ GrafanaAPIBackend.prototype = {
 			returnArray.push(columnName);
 		}
 		return returnArray;
-	},
-	getAlertsCountByCI: function (ciId,filter,alertState) {
-		
-		var alertGr = new GlideRecordSecure('em_alert');
-		alertGr.addQuery('state','IN',alertState);
-		//alertGr.addQuery('sys_created_on','<=',gs.daysAgo(7));
-		alertGr.addQuery("cmdb_ci.sys_id", ciId);
-
-		alertGr.query();
-		var alertsStr="";
-		var count = alertGr.getRowCount();
-		return count;
 	},
 	isCustomKpi: function (metricName, operatingSystems) {
 		var returnValue = false;
@@ -1984,13 +2025,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>79</sys_mod_count>
+        <sys_mod_count>98</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>bstill-routley</sys_updated_by>
-        <sys_updated_on>2022-12-22 18:19:12</sys_updated_on>
+        <sys_updated_on>2023-01-17 16:30:08</sys_updated_on>
     </sys_script_include>
 </record_update>

@@ -10,19 +10,21 @@
         <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
 	var table = "";
 	var search = "";
+	var typeFilter = "";
 	if (request.body.data.targets[0].table)
 		table = request.body.data.targets[0].table;
 	if (request.body.data.targets[0].search)
 		search = request.body.data.targets[0].search;
+	if (request.body.data.targets[0].typeFilter)
+		typeFilter = request.body.data.targets[0].typeFilter;
 
 	response.setContentType('application/json');
-	var writer = response.getStreamWriter();
-	
 	if (table != "") {
+		var writer = response.getStreamWriter();
 		response.setStatus(200);
 	
 		var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
-		var columns = metricData.getAllTableColumns(table, search);
+		var columns = metricData.getAllTableColumns(table, search, typeFilter);
 		writer.writeString(columns);
 	} else {
 		response.setError(new sn_ws_err.BadRequestError("Table name not provided"));
@@ -42,14 +44,14 @@
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 20:03:57</sys_created_on>
         <sys_id>f5ddfc721b348990ba4d15c61a4bcbee</sys_id>
-        <sys_mod_count>3</sys_mod_count>
+        <sys_mod_count>4</sys_mod_count>
         <sys_name>V1-Select-Table_Columns</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy/>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_ws_operation_f5ddfc721b348990ba4d15c61a4bcbee</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2022-10-18 19:39:39</sys_updated_on>
+        <sys_updated_by>bstill-routley</sys_updated_by>
+        <sys_updated_on>2023-01-05 18:20:33</sys_updated_on>
         <web_service_definition display_value="Grafana API">e579f07e1bf08990ba4d15c61a4bcb4f</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>
