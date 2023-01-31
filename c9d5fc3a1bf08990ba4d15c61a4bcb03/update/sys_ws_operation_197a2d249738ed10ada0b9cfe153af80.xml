@@ -4,46 +4,43 @@
         <consumes>application/json,application/xml,text/xml</consumes>
         <consumes_customized>false</consumes_customized>
         <default_operation_uri/>
-        <enforce_acl>cf9d01d3e73003009d6247e603f6a990</enforce_acl>
+        <enforce_acl>5e3aadfe87625510406540c6cebb3582</enforce_acl>
         <http_method>POST</http_method>
-        <name>V1-Query-Node-Graph</name>
+        <name>V2-Variable-Nested_Value</name>
         <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
 	var starting_point = request.body.data.starting_point;
 	var parent_limit = request.body.data.parent_limit;
 	var child_limit = request.body.data.child_limit;
-	var relationship_types = request.body.data.relationship_types;
-	var excluded_classes = request.body.data.excluded_classes;
+	var relationship_types = request.body.data.relationship_types.split(",");
+	var excluded_classes = request.body.data.excluded_classes.split(",");
+	var type = request.body.data.type;
 	
-    response.setContentType('application/json');
+	response.setContentType('application/json');
 	response.setStatus(200);
-	var APIBackend = new x_opti8_itom_grafa.GrafanaAPIBackend();
-	
-	//var backendResponse = APIBackend.queryNodeGraph("451047c6c0a8016400de0ae6df9b9d76", 1, 1, [], []);
-	var backendResponse = APIBackend.queryNodeGraph(starting_point, parent_limit, child_limit, relationship_types, excluded_classes);
-	response.setBody(backendResponse);
-
+	var nested_cis = new x_opti8_itom_grafa.GrafanaAPIBackend().getNestedCISv2(starting_point, parent_limit, child_limit, relationship_types, excluded_classes, type);
+	response.setBody(nested_cis);
 })(request, response);]]></operation_script>
-        <operation_uri>/api/x_opti8_itom_grafa/grafana_api/v1/query/node-graph</operation_uri>
+        <operation_uri>/api/x_opti8_itom_grafa/grafana_api/v2/variable/nested_value</operation_uri>
         <produces>application/json,application/xml,text/xml</produces>
         <produces_customized>false</produces_customized>
-        <relative_path>/v1/query/node-graph</relative_path>
+        <relative_path>/v2/variable/nested_value</relative_path>
         <request_example/>
         <requires_acl_authorization>true</requires_acl_authorization>
         <requires_authentication>true</requires_authentication>
         <requires_snc_internal_role>true</requires_snc_internal_role>
         <short_description/>
         <sys_class_name>sys_ws_operation</sys_class_name>
-        <sys_created_by>bstill-routley</sys_created_by>
-        <sys_created_on>2022-12-14 17:15:01</sys_created_on>
-        <sys_id>b0efeac91bfbd150ba4d15c61a4bcb09</sys_id>
-        <sys_mod_count>18</sys_mod_count>
-        <sys_name>V1-Query-Node-Graph</sys_name>
+        <sys_created_by>optimiz</sys_created_by>
+        <sys_created_on>2023-01-31 15:54:33</sys_created_on>
+        <sys_id>197a2d249738ed10ada0b9cfe153af80</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>V2-Variable-Nested_Value</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy/>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
-        <sys_update_name>sys_ws_operation_b0efeac91bfbd150ba4d15c61a4bcb09</sys_update_name>
+        <sys_update_name>sys_ws_operation_197a2d249738ed10ada0b9cfe153af80</sys_update_name>
         <sys_updated_by>optimiz</sys_updated_by>
-        <sys_updated_on>2023-01-31 16:00:10</sys_updated_on>
+        <sys_updated_on>2023-01-31 19:57:41</sys_updated_on>
         <web_service_definition display_value="Grafana API">e579f07e1bf08990ba4d15c61a4bcb4f</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>

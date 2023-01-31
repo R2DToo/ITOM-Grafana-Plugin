@@ -10,12 +10,7 @@
         <script><![CDATA[var GrafanaAPIBackend = Class.create();
 GrafanaAPIBackend.prototype = {
     initialize: function() {
-    },
-	doesTableExist: function (table) {
-		return {tableExists: gs.tableExists(table)};
-	},
-	queryNodeGraph: function(starting_point_sys_id, search_parent_limit, search_child_limit, rel_types, excluded_classes) {
-		var hard_excluded_classes = [
+		this.hard_excluded_classes = [
 			"dscy_route_next_hop",
 			"cmdb_ci_memory_module",
 			"cmdb_ci_disk",
@@ -37,7 +32,110 @@ GrafanaAPIBackend.prototype = {
 			"cmdb_ci_patches",
 			"cmdb_ci_endpoint_manual"
 		];
-		var full_excluded_classes = hard_excluded_classes.concat(excluded_classes);
+    },
+	doesTableExist: function (table) {
+		return {tableExists: gs.tableExists(table)};
+	},
+	getNestedCISv2: function (starting_point_sys_id, search_parent_limit, search_child_limit, rel_types, excluded_classes, type) {
+		var full_excluded_classes = this.hard_excluded_classes.concat(excluded_classes);
+		var next_parents = [starting_point_sys_id];
+		var next_children = [starting_point_sys_id];
+		var already_checked_parents = [];
+		var already_checked_children = [];
+		var node_ids = [];
+		var response = [];
+		if (type != "ci") {
+			response.push({id: "", name: "None"});
+		}
+		try {
+			while (search_parent_limit > 0) {
+				while (next_parents.length > 0) {
+					var current_parent_search = next_parents.pop();
+					var parentGR = new GlideRecordSecure("cmdb_rel_ci");
+					parentGR.addQuery("child", current_parent_search);
+					if (rel_types.length > 0) {
+						parentGR.addQuery("type", "IN", rel_types.toString());
+					}
+					parentGR.addQuery("child.sys_class_name", "NOT IN", full_excluded_classes.toString());
+					parentGR.addQuery("parent.sys_class_name", "NOT IN", full_excluded_classes.toString());
+					parentGR.query();
+					while (parentGR.next()) {
+						var parent_id = parentGR.getValue("parent");
+						var parent_class_value = parentGR.parent.sys_class_name.toString();
+						if (next_parents.indexOf(parent_id) == -1 && already_checked_parents.indexOf(parent_id) == -1) {
+							next_parents.push(parent_id);
+							already_checked_parents.push(parent_id);
+						}
+						if (node_ids.indexOf(type == "ci" ? parent_id : parent_class_value) == -1) {
+							node_ids.push(type == "ci" ? parent_id : parent_class_value);
+							if (type == "ci") {
+								response.push({id: parent_id, name: parentGR.getDisplayValue("parent")});
+							} else {
+								response.push({id: parent_class_value, name: parentGR.parent.sys_class_name.getDisplayValue()});
+							}
+						}
+						var child_id = parentGR.getValue("child");
+						var child_class_value = parentGR.child.sys_class_name.toString();
+						if (node_ids.indexOf(type == "ci" ? child_id : child_class_value) == -1) {
+							node_ids.push(type == "ci" ? child_id : child_class_value);
+							if (type == "ci") {
+								response.push({id: child_id, name: parentGR.getDisplayValue("child")});
+							} else {
+								response.push({id: child_class_value, name: parentGR.child.sys_class_name.getDisplayValue()});
+							}
+						}
+					}
+				}
+				search_parent_limit -= 1;
+			}
+			
+			while (search_child_limit > 0) {
+				while (next_children.length > 0) {
+					var current_child_search = next_children.pop();
+					var childGR = new GlideRecordSecure("cmdb_rel_ci");
+					childGR.addQuery("parent", current_child_search);
+					if (rel_types.length > 0) {
+						childGR.addQuery("type", "IN", rel_types.toString());
+					}
+					childGR.addQuery("child.sys_class_name", "NOT IN", full_excluded_classes.toString());
+					childGR.addQuery("parent.sys_class_name", "NOT IN", full_excluded_classes.toString());
+					childGR.query();
+					while (childGR.next()) {
+						var parent_id = childGR.getValue("parent");
+						var parent_class_value = childGR.parent.sys_class_name.toString();
+						if (node_ids.indexOf(type == "ci" ? parent_id : parent_class_value) == -1) {
+							node_ids.push(type == "ci" ? parent_id : parent_class_value);
+							if (type == "ci") {
+								response.push({id: parent_id, name: childGR.getDisplayValue("parent")});
+							} else {
+								response.push({id: parent_class_value, name: childGR.parent.sys_class_name.getDisplayValue()});
+							}
+						}
+						var child_id = childGR.getValue("child");
+						var child_class_value = childGR.child.sys_class_name.toString();
+						if (next_children.indexOf(child_id) == -1 && already_checked_children.indexOf(child_id) == -1) {
+							next_children.push(child_id);
+							already_checked_children.push(child_id);
+						}
+						if (node_ids.indexOf(type == "ci" ? child_id : child_class_value) == -1) {
+							node_ids.push(type == "ci" ? child_id : child_class_value);
+							if (type == "ci") {
+								response.push({id: child_id, name: childGR.getDisplayValue("child")});
+							} else {
+								response.push({id: child_class_value, name: childGR.child.sys_class_name.getDisplayValue()});
+							}
+						}
+					}
+				}
+				search_child_limit -= 1;
+			}
+		} catch (e) {
+			return [{error: e}];
+		}
+		return response;
+	},
+	queryNodeGraph: function(starting_point_sys_id, search_parent_limit, search_child_limit, rel_types, excluded_classes) {
+		var full_excluded_classes = this.hard_excluded_classes.concat(excluded_classes);
 		var next_parents = [starting_point_sys_id];
 		var next_children = [starting_point_sys_id];
 		var already_checked_parents = [];
@@ -1219,8 +1317,8 @@ GrafanaAPIBackend.prototype = {
 					parentGR.addQuery("child.sys_id", childId);
 					if (sysparam_query != "")
 						parentGR.addEncodedQuery(sysparam_query);
-					parentGR.addQuery("child.sys_class_name", "NOT IN", excludedClasses);
-					parentGR.addQuery("parent.sys_class_name", "NOT IN", excludedClasses);
+					parentGR.addQuery("child.sys_class_name", "NOT IN", this.hard_excluded_classes.toString());
+					parentGR.addQuery("parent.sys_class_name", "NOT IN", this.hard_excluded_classes.toString());
 					parentGR.query();
 					while (parentGR.next()) {
 						var parentObj = {};
@@ -1262,8 +1360,8 @@ GrafanaAPIBackend.prototype = {
 					childGR.addQuery("parent.sys_id", parentId);
 					if (sysparam_query != "")
 						childGR.addEncodedQuery(sysparam_query);
-					childGR.addQuery("child.sys_class_name", "NOT IN", excludedClasses);
-					childGR.addQuery("parent.sys_class_name", "NOT IN", excludedClasses);
+					childGR.addQuery("child.sys_class_name", "NOT IN", this.hard_excluded_classes.toString());
+					childGR.addQuery("parent.sys_class_name", "NOT IN", this.hard_excluded_classes.toString());
 					childGR.query();
 					while (childGR.next()) {
 						var childObj = {};
@@ -2031,13 +2129,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>102</sys_mod_count>
+        <sys_mod_count>110</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
-        <sys_updated_by>bstill-routley</sys_updated_by>
-        <sys_updated_on>2023-01-30 21:50:30</sys_updated_on>
+        <sys_updated_by>optimiz</sys_updated_by>
+        <sys_updated_on>2023-01-31 20:29:31</sys_updated_on>
     </sys_script_include>
 </record_update>
