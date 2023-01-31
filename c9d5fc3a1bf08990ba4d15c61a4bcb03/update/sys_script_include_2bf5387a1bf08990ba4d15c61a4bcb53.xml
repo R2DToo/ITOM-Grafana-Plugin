@@ -25,6 +25,8 @@ GrafanaAPIBackend.prototype = {
 			"dscy_router_interface",
 			"cmdb_ci_network_adapter",
 			"dscy_route_interface",
+			"dscy_switchport",
+			"dscy_swtch_partition",
 			"cmdb_ci_file_system",
 			"cmdb_ci_lvm_pool",
 			"cmdb_ci_storage_device",
@@ -38,6 +40,8 @@ GrafanaAPIBackend.prototype = {
 		var full_excluded_classes = hard_excluded_classes.concat(excluded_classes);
 		var next_parents = [starting_point_sys_id];
 		var next_children = [starting_point_sys_id];
+		var already_checked_parents = [];
+		var already_checked_children = [];
 		var node_ids = [];
 		var response = {
 			nodes: [],
@@ -58,8 +62,9 @@ GrafanaAPIBackend.prototype = {
 					parentGR.query();
 					while (parentGR.next()) {
 						var parent_id = parentGR.getValue("parent");
-						if (next_parents.indexOf(parent_id) == -1) {
+						if (next_parents.indexOf(parent_id) == -1 && already_checked_parents.indexOf(parent_id) == -1) {
 							next_parents.push(parent_id);
+							already_checked_parents.push(parent_id);
 						}
 						if (node_ids.indexOf(parent_id) == -1) {
 							node_ids.push(parent_id);
@@ -115,8 +120,9 @@ GrafanaAPIBackend.prototype = {
 							response.nodes.push(parent_node);
 						}
 						var child_id = childGR.getValue("child");
-						if (next_children.indexOf(child_id) == -1) {
+						if (next_children.indexOf(child_id) == -1 && already_checked_children.indexOf(child_id) == -1) {
 							next_children.push(child_id);
+							already_checked_children.push(child_id);
 						}
 						if (node_ids.indexOf(child_id) == -1) {
 							node_ids.push(child_id);
@@ -1322,7 +1328,7 @@ GrafanaAPIBackend.prototype = {
 		return '['+returnStr+"]";
 	},
 	queryGeohashMap: function (table, regionColumn, sysparam) {
-		var aggArray = JSON.parse(this.getAggregate(table, sysparam, 'COUNT', 'vm_sys_id', regionColumn, 9999));
+		var aggArray = this.getAggregate(table, sysparam, 'COUNT', 'vm_sys_id', regionColumn, 9999);
 		for(var i = 0; i < aggArray.length; i++) {
 			aggArray[i].geohash = this.getGeohash(aggArray[i][regionColumn]);
 		}
@@ -2025,13 +2031,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>98</sys_mod_count>
+        <sys_mod_count>102</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>bstill-routley</sys_updated_by>
-        <sys_updated_on>2023-01-17 16:30:08</sys_updated_on>
+        <sys_updated_on>2023-01-30 21:50:30</sys_updated_on>
     </sys_script_include>
 </record_update>
