@@ -49,6 +49,7 @@ GrafanaAPIBackend.prototype = {
 		}
 		try {
 			while (search_parent_limit > 0) {
+				var parent_buffer = [];
 				while (next_parents.length > 0) {
 					var current_parent_search = next_parents.pop();
 					var parentGR = new GlideRecordSecure("cmdb_rel_ci");
@@ -62,8 +63,8 @@ GrafanaAPIBackend.prototype = {
 					while (parentGR.next()) {
 						var parent_id = parentGR.getValue("parent");
 						var parent_class_value = parentGR.parent.sys_class_name.toString();
-						if (next_parents.indexOf(parent_id) == -1 && already_checked_parents.indexOf(parent_id) == -1) {
-							next_parents.push(parent_id);
+						if (parent_buffer.indexOf(parent_id) == -1 && already_checked_parents.indexOf(parent_id) == -1) {
+							parent_buffer.push(parent_id);
 							already_checked_parents.push(parent_id);
 						}
 						if (node_ids.indexOf(type == "ci" ? parent_id : parent_class_value) == -1) {
@@ -86,10 +87,12 @@ GrafanaAPIBackend.prototype = {
 						}
 					}
 				}
+				next_parents = parent_buffer;
 				search_parent_limit -= 1;
 			}
 			
 			while (search_child_limit > 0) {
+				var child_buffer = [];
 				while (next_children.length > 0) {
 					var current_child_search = next_children.pop();
 					var childGR = new GlideRecordSecure("cmdb_rel_ci");
@@ -113,8 +116,8 @@ GrafanaAPIBackend.prototype = {
 						}
 						var child_id = childGR.getValue("child");
 						var child_class_value = childGR.child.sys_class_name.toString();
-						if (next_children.indexOf(child_id) == -1 && already_checked_children.indexOf(child_id) == -1) {
-							next_children.push(child_id);
+						if (child_buffer.indexOf(child_id) == -1 && already_checked_children.indexOf(child_id) == -1) {
+							child_buffer.push(child_id);
 							already_checked_children.push(child_id);
 						}
 						if (node_ids.indexOf(type == "ci" ? child_id : child_class_value) == -1) {
@@ -127,6 +130,7 @@ GrafanaAPIBackend.prototype = {
 						}
 					}
 				}
+				next_children = child_buffer;
 				search_child_limit -= 1;
 			}
 		} catch (e) {
@@ -148,6 +152,7 @@ GrafanaAPIBackend.prototype = {
 		};
 		try {
 			while (search_parent_limit > 0) {
+				var parent_buffer = [];
 				while (next_parents.length > 0) {
 					var current_parent_search = next_parents.pop();
 					var parentGR = new GlideRecordSecure("cmdb_rel_ci");
@@ -160,8 +165,8 @@ GrafanaAPIBackend.prototype = {
 					parentGR.query();
 					while (parentGR.next()) {
 						var parent_id = parentGR.getValue("parent");
-						if (next_parents.indexOf(parent_id) == -1 && already_checked_parents.indexOf(parent_id) == -1) {
-							next_parents.push(parent_id);
+						if (parent_buffer.indexOf(parent_id) == -1 && already_checked_parents.indexOf(parent_id) == -1) {
+							parent_buffer.push(parent_id);
 							already_checked_parents.push(parent_id);
 						}
 						if (node_ids.indexOf(parent_id) == -1) {
@@ -192,10 +197,12 @@ GrafanaAPIBackend.prototype = {
 						response.edges.push(edge);
 					}
 				}
+				next_parents = parent_buffer;
 				search_parent_limit -= 1;
 			}
 			
 			while (search_child_limit > 0) {
+				var child_buffer = [];
 				while (next_children.length > 0) {
 					var current_child_search = next_children.pop();
 					var childGR = new GlideRecordSecure("cmdb_rel_ci");
@@ -218,8 +225,8 @@ GrafanaAPIBackend.prototype = {
 							response.nodes.push(parent_node);
 						}
 						var child_id = childGR.getValue("child");
-						if (next_children.indexOf(child_id) == -1 && already_checked_children.indexOf(child_id) == -1) {
-							next_children.push(child_id);
+						if (child_buffer.indexOf(child_id) == -1 && already_checked_children.indexOf(child_id) == -1) {
+							child_buffer.push(child_id);
 							already_checked_children.push(child_id);
 						}
 						if (node_ids.indexOf(child_id) == -1) {
@@ -240,6 +247,7 @@ GrafanaAPIBackend.prototype = {
 						response.edges.push(edge);
 					}
 				}
+				next_children = child_buffer;
 				search_child_limit -= 1;
 			}
 			for (var x = 0; x < response.nodes.length; x++) {
@@ -721,10 +729,7 @@ GrafanaAPIBackend.prototype = {
 					result[0][key].datapoints.push([0, this.convertSysCreatedStrToMS(startTime)]);
 					startTime.addSeconds(intervalInSeconds);
 				}
-				//result[0][key] = {datapoints: [[0, this.convertSysCreatedStrToMS(startTime)]]};
-				//result[0][key].datapoints.push([0, this.convertSysCreatedStrToMS(endTime)]);
 			}
-			//result[0].datapoints.push([0, this.convertSysCreatedStrToMS(endTime)]);
 		}
 		return JSON.stringify(result);
 	},
@@ -1199,6 +1204,17 @@ GrafanaAPIBackend.prototype = {
 						data: []
 					}
 				];
+				/*var intervalInSeconds = 60;
+				var timeDifference = GlideDateTime.subtract(start_time, end_time);
+				if (timeDifference.getDisplayValue().contains("Days")) {
+					intervalInSeconds = 60 * 60;
+				}
+				while (start_time <= end_time) {
+					dataSet.series[0].data.push({time: this.convertSysCreatedStrToMS(start_time), value: 0});
+					dataSet.series[1].data.push({time: this.convertSysCreatedStrToMS(start_time), value: 0});
+					dataSet.series[2].data.push({time: this.convertSysCreatedStrToMS(start_time), value: 0});
+					start_time.addSeconds(intervalInSeconds);
+				}*/
 				return dataSet;
 			}
 			
@@ -2129,13 +2145,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>110</sys_mod_count>
+        <sys_mod_count>122</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>optimiz</sys_updated_by>
-        <sys_updated_on>2023-01-31 20:29:31</sys_updated_on>
+        <sys_updated_on>2023-02-03 18:50:52</sys_updated_on>
     </sys_script_include>
 </record_update>
