@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ws_operation">
+    <sys_ws_operation action="DELETE">
+        <active>true</active>
+        <consumes>application/json,application/xml,text/xml</consumes>
+        <consumes_customized>false</consumes_customized>
+        <default_operation_uri/>
+        <enforce_acl>5e3aadfe87625510406540c6cebb3582</enforce_acl>
+        <http_method>POST</http_method>
+        <name>V1-Query-Changes</name>
+        <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
+	var ciId = "";
+	var sysparam = "";
+	var alertType = "service";
+	var sortBy = "";
+	var sortDirection = "ASC";
+	var limit = 9999;
+	var page = 0;
+	if (request.body.data.targets[0].target)
+		ciId = request.body.data.targets[0].target;
+	if (request.body.data.targets[0].sysparm_query)
+		sysparam = request.body.data.targets[0].sysparm_query;
+	if (request.body.data.targets[0].alertType)
+		alertType = request.body.data.targets[0].alertType;
+	if (request.body.data.targets[0].limit) {
+		if (request.body.data.targets[0].limit <= 10000 && request.body.data.targets[0].limit > 0)
+			limit = request.body.data.targets[0].limit;
+	}
+	if (request.body.data.targets[0].page) {
+		if (request.body.data.targets[0].page >= 0)
+			page = request.body.data.targets[0].page;
+	}
+	if (request.body.data.targets[0].sortBy)
+		sortBy = request.body.data.targets[0].sortBy;
+	if (request.body.data.targets[0].sortDirection)
+		sortDirection = request.body.data.targets[0].sortDirection;
+	//To do: add a condition if input not provided to return 500 error
+	var queryParams = request.queryParams;
+	var endTimeInput=queryParams.endTime;
+	var startTimeInput=queryParams.startTime;
+	var timerangeColumn="sys_updated_on";
+	if (queryParams.timerangeColumn) {
+		timerangeColumn = queryParams.timerangeColumn;
+	}
+	
+	response.setContentType('application/json');
+    response.setStatus(200);
+	var writer = response.getStreamWriter();
+	
+	var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
+    var metricValues=metricData.getChanges(ciId, alertType, sysparam, limit, page, sortBy, sortDirection, startTimeInput, endTimeInput, timerangeColumn);
+	
+	writer.writeString(metricValues);
+})(request, response);]]></operation_script>
+        <operation_uri>/api/x_opti8_itom_grafa/grafana_api/v1/query/changes</operation_uri>
+        <produces>application/json,application/xml,text/xml</produces>
+        <produces_customized>false</produces_customized>
+        <relative_path>/v1/query/changes</relative_path>
+        <request_example/>
+        <requires_acl_authorization>true</requires_acl_authorization>
+        <requires_authentication>true</requires_authentication>
+        <requires_snc_internal_role>true</requires_snc_internal_role>
+        <short_description/>
+        <sys_class_name>sys_ws_operation</sys_class_name>
+        <sys_created_by>bstill-routley</sys_created_by>
+        <sys_created_on>2022-01-05 19:59:23</sys_created_on>
+        <sys_id>8fcc7c321b348990ba4d15c61a4bcb2c</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>V1-Query-Changes</sys_name>
+        <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
+        <sys_update_name>sys_ws_operation_8fcc7c321b348990ba4d15c61a4bcb2c</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2022-10-18 19:37:19</sys_updated_on>
+        <web_service_definition display_value="Grafana API">e579f07e1bf08990ba4d15c61a4bcb4f</web_service_definition>
+        <web_service_version/>
+    </sys_ws_operation>
+<sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</application>
+        <file_path/>
+        <instance_id>7369be8cdb76381052dd2f17d4961908</instance_id>
+        <instance_name>optimizincdemo1</instance_name>
+        <name>sys_ws_operation_8fcc7c321b348990ba4d15c61a4bcb2c</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_ws_operation"&gt;
+    &lt;sys_ws_operation action="INSERT_OR_UPDATE"&gt;
+        &lt;active&gt;true&lt;/active&gt;
+        &lt;consumes&gt;application/json,application/xml,text/xml&lt;/consumes&gt;
+        &lt;consumes_customized&gt;false&lt;/consumes_customized&gt;
+        &lt;default_operation_uri/&gt;
+        &lt;enforce_acl&gt;5e3aadfe87625510406540c6cebb3582&lt;/enforce_acl&gt;
+        &lt;http_method&gt;POST&lt;/http_method&gt;
+        &lt;name&gt;V1-Query-Changes&lt;/name&gt;
+        &lt;operation_script&gt;&lt;![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
+	var ciId = "";
+	var sysparam = "";
+	var alertType = "service";
+	var sortBy = "";
+	var sortDirection = "ASC";
+	var limit = 9999;
+	var page = 0;
+	if (request.body.data.targets[0].target)
+		ciId = request.body.data.targets[0].target;
+	if (request.body.data.targets[0].sysparm_query)
+		sysparam = request.body.data.targets[0].sysparm_query;
+	if (request.body.data.targets[0].alertType)
+		alertType = request.body.data.targets[0].alertType;
+	if (request.body.data.targets[0].limit) {
+		if (request.body.data.targets[0].limit &lt;= 10000 &amp;&amp; request.body.data.targets[0].limit &gt; 0)
+			limit = request.body.data.targets[0].limit;
+	}
+	if (request.body.data.targets[0].page) {
+		if (request.body.data.targets[0].page &gt;= 0)
+			page = request.body.data.targets[0].page;
+	}
+	if (request.body.data.targets[0].sortBy)
+		sortBy = request.body.data.targets[0].sortBy;
+	if (request.body.data.targets[0].sortDirection)
+		sortDirection = request.body.data.targets[0].sortDirection;
+	//To do: add a condition if input not provided to return 500 error
+	var queryParams = request.queryParams;
+	var endTimeInput=queryParams.endTime;
+	var startTimeInput=queryParams.startTime;
+	var timerangeColumn="sys_updated_on";
+	if (queryParams.timerangeColumn) {
+		timerangeColumn = queryParams.timerangeColumn;
+	}
+	
+	response.setContentType('application/json');
+    response.setStatus(200);
+	var writer = response.getStreamWriter();
+	
+	var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
+    var metricValues=metricData.getChanges(ciId, alertType, sysparam, limit, page, sortBy, sortDirection, startTimeInput, endTimeInput, timerangeColumn);
+	
+	writer.writeString(metricValues);
+})(request, response);]]&gt;&lt;/operation_script&gt;
+        &lt;operation_uri&gt;/api/x_opti8_itom_grafa/grafana_api/v1/query/changes&lt;/operation_uri&gt;
+        &lt;produces&gt;application/json,application/xml,text/xml&lt;/produces&gt;
+        &lt;produces_customized&gt;false&lt;/produces_customized&gt;
+        &lt;relative_path&gt;/v1/query/changes&lt;/relative_path&gt;
+        &lt;request_example/&gt;
+        &lt;requires_acl_authorization&gt;true&lt;/requires_acl_authorization&gt;
+        &lt;requires_authentication&gt;true&lt;/requires_authentication&gt;
+        &lt;requires_snc_internal_role&gt;true&lt;/requires_snc_internal_role&gt;
+        &lt;short_description/&gt;
+        &lt;sys_class_name&gt;sys_ws_operation&lt;/sys_class_name&gt;
+        &lt;sys_created_by&gt;bstill-routley&lt;/sys_created_by&gt;
+        &lt;sys_created_on&gt;2022-01-05 19:59:23&lt;/sys_created_on&gt;
+        &lt;sys_id&gt;8fcc7c321b348990ba4d15c61a4bcb2c&lt;/sys_id&gt;
+        &lt;sys_mod_count&gt;3&lt;/sys_mod_count&gt;
+        &lt;sys_name&gt;V1-Query-Changes&lt;/sys_name&gt;
+        &lt;sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa"&gt;c9d5fc3a1bf08990ba4d15c61a4bcb03&lt;/sys_package&gt;
+        &lt;sys_policy/&gt;
+        &lt;sys_scope display_value="ITOM Grafana Plugin"&gt;c9d5fc3a1bf08990ba4d15c61a4bcb03&lt;/sys_scope&gt;
+        &lt;sys_update_name&gt;sys_ws_operation_8fcc7c321b348990ba4d15c61a4bcb2c&lt;/sys_update_name&gt;
+        &lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;
+        &lt;sys_updated_on&gt;2022-10-18 19:37:19&lt;/sys_updated_on&gt;
+        &lt;web_service_definition display_value="Grafana API"&gt;e579f07e1bf08990ba4d15c61a4bcb4f&lt;/web_service_definition&gt;
+        &lt;web_service_version/&gt;
+    &lt;/sys_ws_operation&gt;
+&lt;/record_update&gt;</payload>
+        <payload_hash>-1947953618</payload_hash>
+        <record_name>V1-Query-Changes</record_name>
+        <reverted_from/>
+        <source>e671e59c871f69d0406540c6cebb353f</source>
+        <source_table>sys_upgrade_history</source_table>
+        <state>previous</state>
+        <sys_created_by>bstill-routley</sys_created_by>
+        <sys_created_on>2023-06-04 03:13:55</sys_created_on>
+        <sys_id>8881699c871f69d0406540c6cebb3515</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>1888465a9e00000001</sys_recorded_at>
+        <sys_updated_by>bstill-routley</sys_updated_by>
+        <sys_updated_on>2023-06-04 03:13:55</sys_updated_on>
+        <type>Scripted REST Resource</type>
+        <update_guid>c481699c101f69d067cb37d5c9dfee15</update_guid>
+        <update_guid_history>c481699c101f69d067cb37d5c9dfee15:0,4e4398d7b003ad90d4699728295e7f89:972254481,d3a796b4bfb26910907e5576537507aa:0,e2d6a0e4ee7ae51019d2487e72a86ae7:151560,797d01a96d3029902e1b0616e78be10a:0,b12d056953302990df3936a85602f0bb:-1421948293,3d6ba26034b0a1900529b987f029a547:0,031c749228af9110d43ee0a5801ddd66:-1737369943,7c8ee1f69ba25510e6b77ea44e219076:801914972,82e6531fd3fc0d906cffe30de7d56ab6:543064935,51ae7cb24e348990e576adbf82c8d98f:-2089821679,f3dcf832fa3489906fe75d8c5cd5ff2a:-360658027</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>bstill-routley</sys_created_by>
+        <sys_created_on>2023-07-04 14:11:53</sys_created_on>
+        <sys_db_object display_value="" name="sys_ws_operation">sys_ws_operation</sys_db_object>
+        <sys_id>7ab9b086557e4cf086dcaf4a6a0a7289</sys_id>
+        <sys_metadata>8fcc7c321b348990ba4d15c61a4bcb2c</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>V1-Query-Changes</sys_name>
+        <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
+        <sys_scope_delete display_value="">137fc854700141a29597d887089a3a29</sys_scope_delete>
+        <sys_update_name>sys_ws_operation_8fcc7c321b348990ba4d15c61a4bcb2c</sys_update_name>
+        <sys_update_version display_value="sys_ws_operation_8fcc7c321b348990ba4d15c61a4bcb2c">8881699c871f69d0406540c6cebb3515</sys_update_version>
+        <sys_updated_by>bstill-routley</sys_updated_by>
+        <sys_updated_on>2023-07-04 14:11:53</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>
