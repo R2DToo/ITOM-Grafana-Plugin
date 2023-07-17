@@ -13,7 +13,7 @@
         <license_definition/>
         <license_model>none</license_model>
         <logo/>
-        <menu/>
+        <menu display_value="ITOM Grafana Plugin">80e98e8e47be615035b92422736d4365</menu>
         <name>ITOM Grafana Plugin</name>
         <private>false</private>
         <restrict_table_access>false</restrict_table_access>
@@ -22,22 +22,22 @@
         <scoped_administration>false</scoped_administration>
         <short_description>Enables visualisation of ITOM data inside Grafana</short_description>
         <source>x_opti8_itom_grafa</source>
-        <store_correlation_id/>
-        <store_url/>
+        <store_correlation_id>REPOAPP0000886710</store_correlation_id>
+        <store_url>https://tpp.servicenow.com/sn_appstore_s</store_url>
         <sys_class_name>sys_app</sys_class_name>
         <sys_code/>
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:28:38</sys_created_on>
         <sys_id>c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_id>
-        <sys_mod_count>10</sys_mod_count>
+        <sys_mod_count>14</sys_mod_count>
         <sys_updated_by>optimiz</sys_updated_by>
-        <sys_updated_on>2023-02-24 22:00:24</sys_updated_on>
+        <sys_updated_on>2023-07-17 18:46:49</sys_updated_on>
         <template/>
         <trackable>true</trackable>
         <uninstall_blocked>false</uninstall_blocked>
         <user_role/>
         <vendor/>
         <vendor_prefix/>
-        <version>1.6.2</version>
+        <version>1.6.3</version>
     </sys_app>
 </record_update>
