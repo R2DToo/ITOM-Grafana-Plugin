@@ -448,7 +448,7 @@ GrafanaAPIBackend.prototype = {
 		while (cmdbGr.next())
 			operatingSystems += cmdbGr.getValue("sys_class_name") + ",";
 
-		queryStr="^cmdb_ci.sys_idIN"+queryStr;
+		queryStr="^cmdb_ciIN"+queryStr;
 		//queryStr="^cmdb_ci.nameIN"+queryStr+"^resource_idISEMPTY";
 
 		var returnMetrics = [];
@@ -459,7 +459,7 @@ GrafanaAPIBackend.prototype = {
 
 		while (metricToCiGr.next()) {
 			var metric_tiny_name = metricToCiGr.metric_type_id.metric_type_tiny_name.getDisplayValue();
-			var metric_type_id = metricToCiGr.metric_type_id.sys_id.toString();
+			var metric_type_id = metricToCiGr.getValue("metric_type_id");
 			var metricTypeId = metricToCiGr.getDisplayValue("metric_type_id");
 			var metricTinyName = metricToCiGr.metric_type_id.metric_type_tiny_name.toString();
 			if(metricNames.indexOf(metric_tiny_name) === -1 ) 
@@ -526,7 +526,7 @@ GrafanaAPIBackend.prototype = {
 				while (idList.length > 0) {
 					var currentId = idList.pop();
 					var parentGR = new GlideRecordSecure("cmdb_rel_ci");
-					parentGR.addQuery("child.sys_id", currentId);
+					parentGR.addQuery("child", currentId);
 					if (sysparam != "")
 						parentGR.addEncodedQuery(sysparam);
 					parentGR.addQuery("child.sys_class_name", "NOT IN", excludedClasses);
@@ -536,9 +536,9 @@ GrafanaAPIBackend.prototype = {
 						var parentObj = {};
 						var childObj = {};
 						parentObj.name = parentGR.parent.name.getDisplayValue();
-						parentObj.id = parentGR.parent.sys_id.toString();
+						parentObj.id = parentGR.getValue("parent");
 						childObj.name = parentGR.child.name.getDisplayValue();
-						childObj.id = parentGR.child.sys_id.toString();
+						childObj.id = parentGR.getValue("child");
 
 						var parent_id = parentObj.id;
 
@@ -576,7 +576,7 @@ GrafanaAPIBackend.prototype = {
 				while (idList.length > 0) {
 					var currentId = idList.pop();
 					var childGR = new GlideRecordSecure("cmdb_rel_ci");
-					childGR.addQuery("parent.sys_id", currentId);
+					childGR.addQuery("parent", currentId);
 					if (sysparam != "")
 						childGR.addEncodedQuery(sysparam);
 					childGR.addQuery("child.sys_class_name", "NOT IN", excludedClasses);
@@ -586,9 +586,9 @@ GrafanaAPIBackend.prototype = {
 						var parentObj = {};
 						var childObj = {};
 						parentObj.name = childGR.parent.name.getDisplayValue();
-						parentObj.id = childGR.parent.sys_id.toString();
+						parentObj.id = childGR.getValue("parent");
 						childObj.name = childGR.child.name.getDisplayValue();
-						childObj.id = childGR.child.sys_id.toString();
+						childObj.id = childGR.getValue("child");
 						
 						var child_id = childObj.id;
 
@@ -1057,7 +1057,7 @@ GrafanaAPIBackend.prototype = {
 		for(var c=0;c<ciIds.length;c++) {
 			for(var m=0;m<metricIds.length;m++)
 				{
-					var strQuery='metric_type_id.sys_id='+metricIds[m]+'^cmdb_ci.sys_id='+ciIds[c]+resourceQueryStr;
+					var strQuery='metric_type_id='+metricIds[m]+'^cmdb_ci='+ciIds[c]+resourceQueryStr;
 					var resourceObjs=this.getAllResourcesFromMetricTbl(strQuery);
 					
 					for(var r=0;r<resourceObjs.length;r++)
@@ -1083,7 +1083,7 @@ GrafanaAPIBackend.prototype = {
 		if(resourceName!="")
 		{
 			ciGr = new GlideRecordSecure("ci_resource");
-			ciGr.addQuery("cmdb_ci.sys_id", ciId);
+			ciGr.addQuery("cmdb_ci", ciId);
 			ciGr.addQuery("name", resourceName);
 		}
 		else
@@ -1350,7 +1350,7 @@ GrafanaAPIBackend.prototype = {
 				while (parentIds.length > 0) {
 					var childId = parentIds.pop();
 					var parentGR = new GlideRecordSecure("cmdb_rel_ci");
-					parentGR.addQuery("child.sys_id", childId);
+					parentGR.addQuery("child", childId);
 					if (sysparam_query != "")
 						parentGR.addEncodedQuery(sysparam_query);
 					parentGR.addQuery("child.sys_class_name", "NOT IN", this.hard_excluded_classes.toString());
@@ -1358,16 +1358,16 @@ GrafanaAPIBackend.prototype = {
 					parentGR.query();
 					while (parentGR.next()) {
 						var parentObj = {};
-						parentObj.parent_name = parentGR.parent.name.toString();
+						parentObj.parent_name = parentGR.getDisplayValue("parent");
 						parentObj.parent_name = parentObj.parent_name.replace(/\\/g, "/");
-						parentObj.parent_id = parentGR.parent.sys_id.toString();
+						parentObj.parent_id = parentGR.getValue("parent");
 						parentObj.parent_class = parentGR.parent.sys_class_name.getDisplayValue();
 						parentObj.parent_class_value = parentGR.parent.sys_class_name.toString();
 						parentObj.child_class = parentGR.child.sys_class_name.getDisplayValue();
 						parentObj.child_class_value = parentGR.child.sys_class_name.toString();
-						parentObj.child_name = parentGR.child.name.toString();
+						parentObj.child_name = parentGR.getDisplayValue("child");
 						parentObj.child_name = parentObj.child_name.replace(/\\/g, "/");
-						parentObj.child_id = parentGR.child.sys_id.toString();
+						parentObj.child_id = parentGR.getValue("child");
 						var alertCount = 0;
 						var impact = 0;
 						impact = this.getImpactStatusOfCI(parentObj.parent_id);
@@ -1393,7 +1393,7 @@ GrafanaAPIBackend.prototype = {
 				while (parentIds.length > 0) {
 					var parentId = parentIds.pop();
 					var childGR = new GlideRecordSecure("cmdb_rel_ci");
-					childGR.addQuery("parent.sys_id", parentId);
+					childGR.addQuery("parent", parentId);
 					if (sysparam_query != "")
 						childGR.addEncodedQuery(sysparam_query);
 					childGR.addQuery("child.sys_class_name", "NOT IN", this.hard_excluded_classes.toString());
@@ -1401,13 +1401,13 @@ GrafanaAPIBackend.prototype = {
 					childGR.query();
 					while (childGR.next()) {
 						var childObj = {};
-						childObj.parent_name = childGR.parent.name.toString();
+						childObj.parent_name = childGR.getDisplayValue("parent");
 						childObj.parent_name = childObj.parent_name.replace(/\\/g, "/");
-						childObj.parent_id = childGR.parent.sys_id.toString();
+						childObj.parent_id = childGR.getValue("parent");
 						childObj.parent_class = childGR.parent.sys_class_name.getDisplayValue();
 						childObj.parent_class_value = childGR.parent.sys_class_name.toString();
-						childObj.child_id = childGR.child.sys_id.toString();
-						childObj.child_name = childGR.child.name.toString();
+						childObj.child_id = childGR.getValue("child");
+						childObj.child_name = childGR.getDisplayValue("child");
 						childObj.child_name = childObj.child_name.replace(/\\/g, "/");
 						childObj.child_class = childGR.child.sys_class_name.getDisplayValue();
 						childObj.child_class_value = childGR.child.sys_class_name.toString();
@@ -2172,13 +2172,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>128</sys_mod_count>
+        <sys_mod_count>129</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>optimiz</sys_updated_by>
-        <sys_updated_on>2023-04-26 20:09:19</sys_updated_on>
+        <sys_updated_on>2023-07-27 22:07:29</sys_updated_on>
     </sys_script_include>
 </record_update>
