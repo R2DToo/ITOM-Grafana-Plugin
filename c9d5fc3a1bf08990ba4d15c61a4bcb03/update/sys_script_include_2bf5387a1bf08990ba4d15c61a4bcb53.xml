@@ -621,6 +621,40 @@ GrafanaAPIBackend.prototype = {
 			return e;
 		}
 	},
+	getGroupByVariable: function (table, groupBy, sysparam) {
+		var returnArray = [];
+		// Possible options are:
+		// s = standard: display value for name and value for id
+		// d = display: display value for both name and id
+		// v = value: for both name and id
+		var options = "s";
+		if (groupBy.includes(":d")) {
+			groupBy = groupBy.substring(0, groupBy.length - 2);
+			options = "d";
+		} else if (groupBy.includes(":v")) {
+			groupBy = groupBy.substring(0, groupBy.length - 2);
+			options = "v";
+		}
+		var tableGA = new GlideAggregate(table);
+		tableGA.addEncodedQuery(sysparam);
+		tableGA.groupBy(groupBy);
+		tableGA.query();
+		while (tableGA.next()) {
+			var obj = {};
+			if (options == "d") {
+				obj.name = tableGA.getDisplayValue(groupBy);
+				obj.id = tableGA.getDisplayValue(groupBy);
+			} else if (options == "v") {
+				obj.name = tableGA.getValue(groupBy);
+				obj.id = tableGA.getValue(groupBy);
+			} else if (options == "s") {
+				obj.name = tableGA.getDisplayValue(groupBy);
+				obj.id = tableGA.getValue(groupBy);
+			}
+			returnArray.push(obj);
+		}
+		return returnArray;
+	},
 	getGenericVariable: function (table, nameColumn, idColumn, sysparam, limit) {
 		var returnValues = [];
 		var alreadyAdded = [];
@@ -778,6 +812,7 @@ GrafanaAPIBackend.prototype = {
 			log.host = logGr.getDisplayValue("host");
 			log.level = logGr.getDisplayValue("level");
 			log.level = log.level.toLowerCase();
+			log.component = logGr.getValue("component");
 			log.id = logGr.getValue("sys_id");
 			returnArray.push(log);
 		}
@@ -2172,13 +2207,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>129</sys_mod_count>
+        <sys_mod_count>132</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>optimiz</sys_updated_by>
-        <sys_updated_on>2023-07-27 22:07:29</sys_updated_on>
+        <sys_updated_on>2023-11-16 02:00:51</sys_updated_on>
     </sys_script_include>
 </record_update>
