@@ -1063,6 +1063,113 @@ GrafanaAPIBackend.prototype = {
 				metricStr = metricStr.substring(0, metricStr.length - 1);
 		return "[" + metricStr + "]";
 	},
+	getLatestSingleMetric: function(ciIdMatch, metricIdMatch, resourceNameMatch, startTimeInput, endTimeInput, sysparam) {
+		var startTime = new GlideDateTime();
+		startTime.subtract(startTime.getNumericValue());// gets the date to 0
+		startTime.add(startTimeInput);
+	
+		var endTime = new GlideDateTime();
+		endTime.subtract(endTime.getNumericValue());
+		endTime.add(endTimeInput);
+		var metricDataStr="";
+		//store cis, resourceName, metricNames
+		var ciIds = this.getValuesByNameMatch(ciIdMatch, "|");
+		var metricIds = this.getValuesByNameMatch(metricIdMatch, "|");
+		var resourceNames = [];
+		var resourceQueryStr ="";
+		if(!this.isMatchAll(resourceNameMatch))
+		{
+			resourceNames = this.getValuesByNameMatch(resourceNameMatch, "|");
+			for(r=0;r<resourceNames.length;r++)
+				resourceQueryStr+=resourceNames[r]+",";
+			
+			resourceQueryStr="^resource_id.nameIN"+resourceQueryStr;
+			if(resourceQueryStr.charAt(resourceQueryStr.length - 1)==',')
+				resourceQueryStr=resourceQueryStr.substring(0, resourceQueryStr.length - 1);
+
+		}
+
+		for(var c=0;c<ciIds.length;c++) {
+			for(var m=0;m<metricIds.length;m++)
+				{
+					var strQuery='metric_type_id='+metricIds[m]+'^cmdb_ci='+ciIds[c]+resourceQueryStr;
+					var resourceObjs=this.getAllResourcesFromMetricTbl(strQuery);
+					
+					for(var r=0;r<resourceObjs.length;r++)
+					{
+						var returnMetricStr=this.getLatestSingleMetricStr(ciIds[c], resourceObjs[r].metricName, resourceObjs[r].resourceName, startTime, endTime, sysparam);
+						if(returnMetricStr.length>0)
+						{
+							metricDataStr+=returnMetricStr;
+							metricDataStr+=",";
+						}
+					}
+				}
+		}
+		
+		//remove last ","
+		if(metricDataStr.charAt(metricDataStr.length - 1)==',')
+			metricDataStr=metricDataStr.substring(0, metricDataStr.length - 1);
+		return '['+metricDataStr+"]";
+	},
+	getLatestSingleMetricStr: function (ciId, metric_name, resourceName, startTime, endTime, sysparam) {
+		var ciGr = new GlideRecordSecure("cmdb_ci");
+		//get table name
+		var ciTable;
+		if(resourceName!="")
+		{
+			ciGr = new GlideRecordSecure("ci_resource");
+			ciGr.addQuery("cmdb_ci", ciId);
+			ciGr.addQuery("name", resourceName);
+		}
+		else
+		{
+			ciGr.addQuery("sys_id", ciId);
+		}
+		ciGr.query();
+		var metricResourceId = ciId;
+		var ciName = ciId;
+		if (ciGr.next())
+		{
+			ciTable = ciGr.getValue("sys_class_name");
+			if(resourceName!="") {
+				metricResourceId=ciGr.getValue("sys_id");
+				ciName = ciGr.cmdb_ci.name.getDisplayValue();
+			} else {
+				ciName = ciGr.getDisplayValue("name");
+			}
+		}
+		var metricTableGr = new GlideRecordSecure(ciTable);
+		metricTableGr.addQuery("sys_id", metricResourceId);
+		if (sysparam!="") {
+			metricTableGr.addEncodedQuery(sysparam);	
+		}
+		metricTableGr.query();
+		try {
+			//build a transform that returns a simple average
+			var builder = new sn_clotho.Transformer(metricTableGr);
+			builder.metric(metric_name).avg().label("Average");
+
+			//execute transform and return result for visualization
+			var result = builder.execute(startTime, endTime);
+
+			var values = result.getData().getValues();
+			var timestamp = result.getData().getStart().getNumericValue();
+			var period = result.getData().getPeriod() * 1000;
+			var metricName = result.getData().getMetricName();
+			
+			var dataSet = {};
+			dataSet.source = ciName;
+			dataSet.type = resourceName;
+			dataSet.metricName = metricName;
+			dataSet.length = 1;
+			dataSet.values = [values[values.length - 1]];
+			dataSet.datapoints = [[values[values.length - 1], timestamp + values.length * period]];
+		} catch(err) {
+			return "";
+		}
+		return JSON.stringify(dataSet);
+	},
 	getSingleMetric: function(ciIdMatch, metricIdMatch, resourceNameMatch,startTimeInput,endTimeInput,sysparam) {
 		var startTime = new GlideDateTime();
 		startTime.subtract(startTime.getNumericValue());// gets the date to 0
@@ -2207,13 +2314,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>132</sys_mod_count>
+        <sys_mod_count>133</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>optimiz</sys_updated_by>
-        <sys_updated_on>2023-11-16 02:00:51</sys_updated_on>
+        <sys_updated_on>2023-11-22 19:24:14</sys_updated_on>
     </sys_script_include>
 </record_update>
