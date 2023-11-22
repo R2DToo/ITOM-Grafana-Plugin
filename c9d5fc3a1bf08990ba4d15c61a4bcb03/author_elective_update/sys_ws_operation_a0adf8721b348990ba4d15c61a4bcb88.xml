@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ws_operation">
+    <sys_ws_operation action="DELETE">
+        <active>true</active>
+        <consumes>application/json,application/xml,text/xml</consumes>
+        <consumes_customized>false</consumes_customized>
+        <default_operation_uri/>
+        <enforce_acl>5e3aadfe87625510406540c6cebb3582</enforce_acl>
+        <http_method>POST</http_method>
+        <name>V1-Query-Topology</name>
+        <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
+	var rootName="";
+	var childDepth=3;
+	var parentDepth=0;
+	var sysparam_query="";
+
+	if (request.body.data.targets[0].target)
+		rootName = request.body.data.targets[0].target;
+	if (request.body.data.targets[0].child_depth)
+		childDepth = request.body.data.targets[0].child_depth;
+	if (request.body.data.targets[0].parent_depth)
+		parentDepth = request.body.data.targets[0].parent_depth;
+	if (request.body.data.targets[0].sysparm_query)
+		sysparam_query = request.body.data.targets[0].sysparm_query;
+	//To do: add a condition if input not provided to return 500 error
+	
+	response.setContentType('application/json');
+    var writer = response.getStreamWriter();
+	
+	if (rootName != "") {
+		response.setStatus(200);
+		var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
+		var metricValues=metricData.getTopology(rootName, childDepth, parentDepth, sysparam_query);
+		
+		response.setBody(metricValues);
+	} else {
+		response.setError(new sn_ws_err.BadRequestError("Starting Point CI not provided"));
+	}
+	
+})(request, response);]]></operation_script>
+        <operation_uri>/api/x_opti8_itom_grafa/grafana_api/v1/query/topology</operation_uri>
+        <produces>application/json,application/xml,text/xml</produces>
+        <produces_customized>false</produces_customized>
+        <relative_path>/v1/query/topology</relative_path>
+        <request_example/>
+        <requires_acl_authorization>true</requires_acl_authorization>
+        <requires_authentication>true</requires_authentication>
+        <requires_snc_internal_role>true</requires_snc_internal_role>
+        <short_description/>
+        <sys_class_name>sys_ws_operation</sys_class_name>
+        <sys_created_by>bstill-routley</sys_created_by>
+        <sys_created_on>2022-01-05 20:02:58</sys_created_on>
+        <sys_id>a0adf8721b348990ba4d15c61a4bcb88</sys_id>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>V1-Query-Topology</sys_name>
+        <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
+        <sys_update_name>sys_ws_operation_a0adf8721b348990ba4d15c61a4bcb88</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-11-22 20:11:25</sys_updated_on>
+        <web_service_definition display_value="Grafana API">e579f07e1bf08990ba4d15c61a4bcb4f</web_service_definition>
+        <web_service_version/>
+    </sys_ws_operation>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</application>
+        <file_path/>
+        <instance_id>7369be8cdb76381052dd2f17d4961908</instance_id>
+        <instance_name>optimizincdemo1</instance_name>
+        <name>sys_ws_operation_a0adf8721b348990ba4d15c61a4bcb88</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_ws_operation"&gt;&lt;sys_ws_operation action="INSERT_OR_UPDATE"&gt;&lt;active&gt;true&lt;/active&gt;&lt;consumes&gt;application/json,application/xml,text/xml&lt;/consumes&gt;&lt;consumes_customized&gt;false&lt;/consumes_customized&gt;&lt;default_operation_uri/&gt;&lt;enforce_acl&gt;5e3aadfe87625510406540c6cebb3582&lt;/enforce_acl&gt;&lt;http_method&gt;POST&lt;/http_method&gt;&lt;name&gt;V1-Query-Topology&lt;/name&gt;&lt;operation_script&gt;&lt;![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
+	var rootName="";
+	var childDepth=3;
+	var parentDepth=0;
+	var sysparam_query="";
+
+	if (request.body.data.targets[0].target)
+		rootName = request.body.data.targets[0].target;
+	if (request.body.data.targets[0].child_depth)
+		childDepth = request.body.data.targets[0].child_depth;
+	if (request.body.data.targets[0].parent_depth)
+		parentDepth = request.body.data.targets[0].parent_depth;
+	if (request.body.data.targets[0].sysparm_query)
+		sysparam_query = request.body.data.targets[0].sysparm_query;
+	//To do: add a condition if input not provided to return 500 error
+	
+	response.setContentType('application/json');
+    var writer = response.getStreamWriter();
+	
+	if (rootName != "") {
+		response.setStatus(200);
+		var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
+		var metricValues=metricData.getTopology(rootName, childDepth, parentDepth, sysparam_query);
+		
+		response.setBody(metricValues);
+	} else {
+		response.setError(new sn_ws_err.BadRequestError("Starting Point CI not provided"));
+	}
+	
+})(request, response);]]&gt;&lt;/operation_script&gt;&lt;operation_uri&gt;/api/x_opti8_itom_grafa/grafana_api/v1/query/topology&lt;/operation_uri&gt;&lt;produces&gt;application/json,application/xml,text/xml&lt;/produces&gt;&lt;produces_customized&gt;false&lt;/produces_customized&gt;&lt;relative_path&gt;/v1/query/topology&lt;/relative_path&gt;&lt;request_example/&gt;&lt;requires_acl_authorization&gt;true&lt;/requires_acl_authorization&gt;&lt;requires_authentication&gt;true&lt;/requires_authentication&gt;&lt;requires_snc_internal_role&gt;true&lt;/requires_snc_internal_role&gt;&lt;short_description/&gt;&lt;sys_class_name&gt;sys_ws_operation&lt;/sys_class_name&gt;&lt;sys_created_by&gt;bstill-routley&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2022-01-05 20:02:58&lt;/sys_created_on&gt;&lt;sys_id&gt;a0adf8721b348990ba4d15c61a4bcb88&lt;/sys_id&gt;&lt;sys_mod_count&gt;4&lt;/sys_mod_count&gt;&lt;sys_name&gt;V1-Query-Topology&lt;/sys_name&gt;&lt;sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa"&gt;c9d5fc3a1bf08990ba4d15c61a4bcb03&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="ITOM Grafana Plugin"&gt;c9d5fc3a1bf08990ba4d15c61a4bcb03&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_ws_operation_a0adf8721b348990ba4d15c61a4bcb88&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2023-11-22 20:11:25&lt;/sys_updated_on&gt;&lt;web_service_definition display_value="Grafana API"&gt;e579f07e1bf08990ba4d15c61a4bcb4f&lt;/web_service_definition&gt;&lt;web_service_version/&gt;&lt;/sys_ws_operation&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>-261478473</payload_hash>
+        <record_name>V1-Query-Topology</record_name>
+        <reverted_from/>
+        <source>d591699c871f69d0406540c6cebb3568</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2023-11-22 20:11:25</sys_created_on>
+        <sys_id>1042bda38762f590406540c6cebb35f9</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>18bf8a8abd40000001</sys_recorded_at>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-11-22 20:11:25</sys_updated_on>
+        <type>Scripted REST Resource</type>
+        <update_guid>1442bda3a362f590babb7c2ee0d10cf8</update_guid>
+        <update_guid_history>1442bda3a362f590babb7c2ee0d10cf8:-261478473,8081699cf61f69d0e4c3e84fbab3693a:0,d643d8d76203ad90aa98ebe697f66358:-1799018052,1fa796b41bb26910f472c85cf88e95e7:0,76d6e0e4a57ae5109e6a295a4cbec14a:-98295005,b17d01a9a6302990a6f1953ca2bc7116:0,7d6ba26049b0a1909a423be54244fb52:0,f7ee6df6d4a25510c6ad8a2850a1a3ad:-839513579,88a1525c7f8941109be955508d638654:-646791904,fdfef0f2733489903b9189891ad05194:424619115,44bdf8727b3489903c22d2e97114a9f8:-1219332113</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>bstill-routley</sys_created_by>
+        <sys_created_on>2023-11-22 20:58:51</sys_created_on>
+        <sys_db_object display_value="" name="sys_ws_operation">sys_ws_operation</sys_db_object>
+        <sys_id>0f23a0922c2b42268b0b2db056d35a31</sys_id>
+        <sys_metadata>a0adf8721b348990ba4d15c61a4bcb88</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>V1-Query-Topology</sys_name>
+        <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
+        <sys_scope_delete display_value="">137fc854700141a29597d887089a3a29</sys_scope_delete>
+        <sys_update_name>sys_ws_operation_a0adf8721b348990ba4d15c61a4bcb88</sys_update_name>
+        <sys_update_version display_value="sys_ws_operation_a0adf8721b348990ba4d15c61a4bcb88">1042bda38762f590406540c6cebb35f9</sys_update_version>
+        <sys_updated_by>bstill-routley</sys_updated_by>
+        <sys_updated_on>2023-11-22 20:58:51</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

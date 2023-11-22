@@ -363,7 +363,7 @@ GrafanaAPIBackend.prototype = {
 			obj["description.boundary"] = description.substring(description.indexOf("boundary ") + 9, description.length);
 			anomalyValues.push(obj);
 		}
-		return JSON.stringify(anomalyValues);
+		return anomalyValues;
 	},
 	getAllTableColumns: function (table, search, typeFilter) {
 		var tablesToCheck = [table];
@@ -427,7 +427,7 @@ GrafanaAPIBackend.prototype = {
 			}
 			columnArray.push(column);
 		}
-		return JSON.stringify(columnArray);
+		return columnArray;
 	},
 	getMetricNamesFromCIs: function (ciIdMatch,type) {
 		var queryStr = "";
@@ -441,7 +441,7 @@ GrafanaAPIBackend.prototype = {
 		if(queryStr.charAt(queryStr.length - 1)==',')
 			queryStr=queryStr.substring(0, queryStr.length - 1);
 
-		cmdbQueryStr="sys_idIN"+queryStr;
+		var cmdbQueryStr="sys_idIN"+queryStr;
 		var cmdbGr = new GlideRecordSecure("cmdb_ci");
 		cmdbGr.addEncodedQuery(cmdbQueryStr);
 		cmdbGr.query();
@@ -490,7 +490,7 @@ GrafanaAPIBackend.prototype = {
 			}
 		}
 		returnMetrics.sort();
-		return JSON.stringify(returnMetrics);
+		return returnMetrics;
 	},
 	getNestedCIS: function(ciId, parentDepth, childDepth, sysparam, type) {
 		var excludedClasses = 'dscy_route_next_hop,cmdb_ci_memory_module,cmdb_ci_disk,cmdb_ci_disk_partition,cmdb_ci_config_file_tracked,	cmdb_ci_ip_address,dscy_router_interface,cmdb_ci_network_adapter,dscy_route_interface,cmdb_ci_file_system,cmdb_ci_lvm_pool,	cmdb_ci_storage_device,cmdb_ci_nas_file_system,cmdb_ci_os_packages,sys_package,cmdb_ci_storage_pool,cmdb_ci_patches,cmdb_ci_endpoint_manual';
@@ -616,7 +616,7 @@ GrafanaAPIBackend.prototype = {
 				idList = nextIdList;
 				childDepth -= 1;
 			}
-			return JSON.stringify(returnValues);
+			return returnValues;
 		} catch (e) {
 			return e;
 		}
@@ -692,7 +692,7 @@ GrafanaAPIBackend.prototype = {
 				returnValues.push(obj);
 			}
 		}
-		return JSON.stringify(returnValues);
+		return returnValues;
 	},
 	getOutageStatus: function (ciIds, showPercent, sysparam, limit, page) {
 		try {
@@ -712,7 +712,7 @@ GrafanaAPIBackend.prototype = {
 				var name = serviceGr.getDisplayValue("name");
 				outageStatus.push(this.getOutageByCI(sys_id, name, showPercent));
 			}
-			return JSON.stringify(outageStatus);
+			return outageStatus;
 		} catch (e) {
 			return e;
 		}
@@ -773,7 +773,7 @@ GrafanaAPIBackend.prototype = {
 				}
 			}
 		}
-		return JSON.stringify(result);
+		return result;
 	},
 	queryLogData: function (sysparam, limit, page, sortBy, sortDirection, startTimeInput, endTimeInput, esSearch, compressLog) {
 		var returnArray = [];
@@ -816,7 +816,7 @@ GrafanaAPIBackend.prototype = {
 			log.id = logGr.getValue("sys_id");
 			returnArray.push(log);
 		}
-		return JSON.stringify(returnArray);
+		return returnArray;
 	},
 	getQueryRowCount: function (table, sysparam, startTimeInput, endTimeInput, timerangeColumn) {
 		if (startTimeInput && endTimeInput) {
@@ -841,7 +841,7 @@ GrafanaAPIBackend.prototype = {
 		var obj = {};
 		obj[table] = parseInt(tableGR.getAggregate('COUNT'));
 		returnArray.push(obj);
-		return JSON.stringify(returnArray);
+		return returnArray;
 	},
 	queryTable: function (tableName, columns, sysparam, sortBy, sortDirection, limit, page, getAlertCount, startTimeInput, endTimeInput, timerangeColumn) {
 		if (startTimeInput && endTimeInput) {
@@ -925,13 +925,13 @@ GrafanaAPIBackend.prototype = {
 				obj.alertCount = count[0].em_alert;
 			}
 			if (tableName == "em_alert") {
-				obj = this.addExtraAlertData(obj, tableGR);
+				//obj = this.addExtraAlertData(obj, tableGR);
 			}
 			returnArray.push(obj);
 			//returnArray.push(this.convertRecordToJSON(tableGR, false));
 		}
 		
-		return JSON.stringify(returnArray);
+		return returnArray;
 	},
 	addExtraAlertData: function(alertObj, tableGR) {
 		alertObj["cmdb_ci.sys_id"] = tableGR.getValue("cmdb_ci");
@@ -984,7 +984,7 @@ GrafanaAPIBackend.prototype = {
 		return returnArray;
 	},
 	getMetrics: function (ciId, startTimeInput, endTimeInput, sysparam) {
-		var metricStr = "";
+		var responseData = [];
 		var startTime = new GlideDateTime();
 		startTime.subtract(startTime.getNumericValue());// gets the date to 0
 		startTime.add(startTimeInput);
@@ -1011,7 +1011,6 @@ GrafanaAPIBackend.prototype = {
 			try {
 				var metrics = this.getAllMetricsByCi(cis[c]);  // TODO: get from clotho instead of metric to ci table
 				var builder;
-				var dataSet = '';
 				for (var i = 0; i < metrics.length; i++) {
 					var metricName;
 					//build a transform that returns a simple average
@@ -1032,38 +1031,28 @@ GrafanaAPIBackend.prototype = {
 					var timestamp = result.getData().getStart().getNumericValue();
 					var period = result.getData().getPeriod() * 1000;
 					metricName = result.getData().getMetricName();
-
-					dataSet+='{"source":"' + ciName + '",';
-					dataSet+='"type":"' + "" + '",';
-					dataSet+='"metricName":"' + metricName + '",';
-					dataSet += ' "datapoints": [';
+					
+					var dataSet = {};
+					dataSet.source = ciName;
+					dataSet.type = "";
+					dataSet.metricName = metricName;
+					dataSet.datapoints = [];
 
 					for (var j = 0; j < values.length; j++) {
-						// [100,1593283865000],
-						if (values[j])
-							dataSet += '[' + values[j] + ',' + timestamp + '],';
-
+						var point = [values[j], timestamp];
+						dataSet.datapoints.push(point);
 						timestamp += period;
 					}
-
-					// remove the last ','
-					if (dataSet[dataSet.length - 1] == ",")
-						dataSet = dataSet.substring(0, dataSet.length - 1);
-
-					dataSet += ']},';
+					responseData.push(dataSet);
 				}
-				// remove the last ','
-
-				metricStr += dataSet;
 			} catch (err) {
 				gs.info(err);
 			}
 		}
-		if (metricStr.charAt(metricStr.length - 1) == ",") 
-				metricStr = metricStr.substring(0, metricStr.length - 1);
-		return "[" + metricStr + "]";
+		return responseData;
 	},
 	getLatestSingleMetric: function(ciIdMatch, metricIdMatch, resourceNameMatch, startTimeInput, endTimeInput, sysparam) {
+		var responseData = [];
 		var startTime = new GlideDateTime();
 		startTime.subtract(startTime.getNumericValue());// gets the date to 0
 		startTime.add(startTimeInput);
@@ -1097,22 +1086,15 @@ GrafanaAPIBackend.prototype = {
 					
 					for(var r=0;r<resourceObjs.length;r++)
 					{
-						var returnMetricStr=this.getLatestSingleMetricStr(ciIds[c], resourceObjs[r].metricName, resourceObjs[r].resourceName, startTime, endTime, sysparam);
-						if(returnMetricStr.length>0)
-						{
-							metricDataStr+=returnMetricStr;
-							metricDataStr+=",";
-						}
+						var metricResponse = this.getLatestSingleMetricObject(ciIds[c], resourceObjs[r].metricName, resourceObjs[r].resourceName, startTime, endTime, sysparam);
+						responseData.push(metricResponse);
 					}
 				}
 		}
 		
-		//remove last ","
-		if(metricDataStr.charAt(metricDataStr.length - 1)==',')
-			metricDataStr=metricDataStr.substring(0, metricDataStr.length - 1);
-		return '['+metricDataStr+"]";
+		return responseData;
 	},
-	getLatestSingleMetricStr: function (ciId, metric_name, resourceName, startTime, endTime, sysparam) {
+	getLatestSingleMetricObject: function (ciId, metric_name, resourceName, startTime, endTime, sysparam) {
 		var ciGr = new GlideRecordSecure("cmdb_ci");
 		//get table name
 		var ciTable;
@@ -1165,12 +1147,13 @@ GrafanaAPIBackend.prototype = {
 			dataSet.length = 1;
 			dataSet.values = [values[values.length - 1]];
 			dataSet.datapoints = [[values[values.length - 1], timestamp + values.length * period]];
+			return dataSet;
 		} catch(err) {
-			return "";
+			return {error: err};
 		}
-		return JSON.stringify(dataSet);
 	},
 	getSingleMetric: function(ciIdMatch, metricIdMatch, resourceNameMatch,startTimeInput,endTimeInput,sysparam) {
+		var responseData = [];
 		var startTime = new GlideDateTime();
 		startTime.subtract(startTime.getNumericValue());// gets the date to 0
 		startTime.add(startTimeInput);
@@ -1204,21 +1187,14 @@ GrafanaAPIBackend.prototype = {
 					
 					for(var r=0;r<resourceObjs.length;r++)
 					{
-						var returnMetricStr=this.getSingleMetricStr(ciIds[c], resourceObjs[r].metricName, resourceObjs[r].resourceName, startTime, endTime, sysparam);
-						if(returnMetricStr.length>0)
-						{
-							metricDataStr+=returnMetricStr;
-							metricDataStr+=",";
-						}
+						var metricResponse = this.getSingleMetricObject(ciIds[c], resourceObjs[r].metricName, resourceObjs[r].resourceName, startTime, endTime, sysparam);
+						responseData.push(metricResponse);
 					}
 				}
 		}
-		//remove last ","
-		if(metricDataStr.charAt(metricDataStr.length - 1)==',')
-			metricDataStr=metricDataStr.substring(0, metricDataStr.length - 1);
-		return '['+metricDataStr+"]";
+		return responseData;
 	},
-	getSingleMetricStr: function (ciId, metric_name, resourceName, startTime, endTime, sysparam) {
+	getSingleMetricObject: function (ciId, metric_name, resourceName, startTime, endTime, sysparam) {
 		var ciGr = new GlideRecordSecure("cmdb_ci");
 		//get table name
 		var ciTable;
@@ -1279,12 +1255,10 @@ GrafanaAPIBackend.prototype = {
 				dataSet.datapoints.push(point);
 				timestamp += period;
 			}
-			//dataSet.datapoints.push([0, this.convertSysCreatedStrToMS(endTime)]);
-			
+			return dataSet;
 		} catch(err) {
-			return "";
+			return {error: err};
 		}
-		return JSON.stringify(dataSet);
 	},
 	getAnomalyMetrics: function (ciId, metricId, startTimeInput, endTimeInput) {
 		try {
@@ -1317,7 +1291,7 @@ GrafanaAPIBackend.prototype = {
 				}
 			}
 
-			return JSON.stringify(returnValues);
+			return returnValues;
 		} catch (e) {
 			return e;
 		}
@@ -1421,7 +1395,6 @@ GrafanaAPIBackend.prototype = {
 		return dataSet;
 	},
 	getAlerts: function(ciId, alertType, alertState, sysparam, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn, tagFilters) {
-		var dataStr="";
 		var alertStateFilter="Open,Reopen";
 		if (alertState == "All")
 			alertStateFilter="Open,Reopen,Closed";
@@ -1440,142 +1413,149 @@ GrafanaAPIBackend.prototype = {
 			tagSysparam = this.createTagSysparam(tagFilters, 'additional_info');
 		}
 		
-		for(var i=0;i<cis.length;i++) {
-			var alertsbyCI=this.getAlertsByCI(cis[i],alertStateFilter,sysparam_query, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn, tagSysparam);
-			if (alertsbyCI.length > 0)
-				dataStr += alertsbyCI + ",";
+		var responseData=this.getAlertsByCI(cis,alertStateFilter,sysparam_query, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn, tagSysparam);
+
+		return responseData;
+	},
+	getAlertsByCI: function (ciIds, filter, query, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn, tagSysparam) {
+		if (startTime && endTime) {
+			var start = new GlideDateTime();
+			start.subtract(start.getNumericValue());// gets the date to 0
+			start.add(startTime);
+
+			var end = new GlideDateTime();
+			end.subtract(end.getNumericValue());
+			end.add(endTime);
 		}
 		
-		if(dataStr.charAt(dataStr.length - 1)==',')
-			dataStr=dataStr.substring(0, dataStr.length - 1);
-		return '['+dataStr+"]";
-	},
-	getTopology: function (serviceId, childDepth, parentDepth, sysparam_query) {
-		var excludedClasses = 'dscy_route_next_hop,cmdb_ci_memory_module,cmdb_ci_disk,cmdb_ci_disk_partition,cmdb_ci_config_file_tracked,	cmdb_ci_ip_address,dscy_router_interface,cmdb_ci_network_adapter,dscy_route_interface,cmdb_ci_file_system,cmdb_ci_lvm_pool,	cmdb_ci_storage_device,cmdb_ci_nas_file_system,cmdb_ci_os_packages,sys_package,cmdb_ci_storage_pool,cmdb_ci_patches,cmdb_ci_endpoint_manual';
-		var topologyRows='{"rows": [';
-		var childDepthLimit = 3;
-		var parentDepthLimit = 0;
-		if (childDepth != "" && childDepth >= 0)
-			childDepthLimit = childDepth;
-		if (parentDepth != "" && parentDepth >= 0)
-			parentDepthLimit = parentDepth;
-		var parentIds = [];
-		var originalIds = [];
-		if (serviceId != "") {
-			originalIds.push(serviceId);
-			parentIds.push(serviceId);
+		var queryFilter;
+		if (filter != "")
+			queryFilter=filter;
+		var sysparam_query;
+		if (query != "")
+			sysparam_query=query;
+		var pageWindow = this.getPageWindow(limit, page);
+		var alertGr = new GlideRecordSecure('em_alert');
+		if (queryFilter) {
+			alertGr.addQuery('state','IN',queryFilter);
 		}
-		try {
-			//Adding starting point node so that all nodes have a parent which can pass classes and alerts down
-			var startGR = new GlideRecordSecure("cmdb_ci");
-			startGR.addQuery('sys_id', parentIds[0]);
-			startGR.query();
-			if (startGR.next()) {
-				var name = startGR.getDisplayValue("name");
-				name = name.replace(/\\/g, "/");
-				var className = startGR.getDisplayValue("sys_class_name");
-				var classNameValue = startGR.getValue("sys_class_name");
-				var sys_id = startGR.getValue("sys_id");
-				var alertCount = 0;
-				var impact = 0;
-				impact = this.getImpactStatusOfCI(parentIds[0]);
-				var alertCountResponse = this.getAggregate("em_alert", "state!=closed^cmdb_ci=" + sys_id, "COUNT", "sys_id", "cmdb_ci", "1");
-				if (alertCountResponse.length > 0) {
-					alertCount = alertCountResponse[0].COUNT;
-				}
-				var childRow = '["' + className + "||" + classNameValue + '",' + 0 + ',"' + "Starting Point||0" + '","' + name + "||" + sys_id + '",' + impact + ',' + alertCount + '],';
-				topologyRows += childRow;
-			}
-
-			while (parentDepthLimit > 0) {
-				var nextChildIds = [];
-				while (parentIds.length > 0) {
-					var childId = parentIds.pop();
-					var parentGR = new GlideRecordSecure("cmdb_rel_ci");
-					parentGR.addQuery("child", childId);
-					if (sysparam_query != "")
-						parentGR.addEncodedQuery(sysparam_query);
-					parentGR.addQuery("child.sys_class_name", "NOT IN", this.hard_excluded_classes.toString());
-					parentGR.addQuery("parent.sys_class_name", "NOT IN", this.hard_excluded_classes.toString());
-					parentGR.query();
-					while (parentGR.next()) {
-						var parentObj = {};
-						parentObj.parent_name = parentGR.getDisplayValue("parent");
-						parentObj.parent_name = parentObj.parent_name.replace(/\\/g, "/");
-						parentObj.parent_id = parentGR.getValue("parent");
-						parentObj.parent_class = parentGR.parent.sys_class_name.getDisplayValue();
-						parentObj.parent_class_value = parentGR.parent.sys_class_name.toString();
-						parentObj.child_class = parentGR.child.sys_class_name.getDisplayValue();
-						parentObj.child_class_value = parentGR.child.sys_class_name.toString();
-						parentObj.child_name = parentGR.getDisplayValue("child");
-						parentObj.child_name = parentObj.child_name.replace(/\\/g, "/");
-						parentObj.child_id = parentGR.getValue("child");
-						var alertCount = 0;
-						var impact = 0;
-						impact = this.getImpactStatusOfCI(parentObj.parent_id);
-						var alertCountResponse = this.getAggregate("em_alert", "state!=closed^cmdb_ci=" + parentObj.parent_id, "COUNT", "sys_id", "cmdb_ci", "1");
-						if (alertCountResponse.length > 0) {
-							alertCount = alertCountResponse[0].COUNT;
-						}
-						var childRow = '["' + parentObj.parent_class + "||" + parentObj.parent_class_value + '",' + 0 + ',"' + parentObj.child_name + "||" + parentObj.child_id + '","' + parentObj.parent_name + "||" + parentObj.parent_id + '",' + impact + ',' + alertCount + '],';
-						topologyRows += childRow;
-						nextChildIds.push(parentObj.parent_id);
-					}
-				}
-				parentIds=nextChildIds;
-				parentDepthLimit -= 1;
-			}
-
-			if (parentDepthLimit == 0 && originalIds.length > 0) {
-				parentIds=originalIds;
-			}
-
-			while (childDepthLimit > 0) {
-				var nextParentIds = [];
-				while (parentIds.length > 0) {
-					var parentId = parentIds.pop();
-					var childGR = new GlideRecordSecure("cmdb_rel_ci");
-					childGR.addQuery("parent", parentId);
-					if (sysparam_query != "")
-						childGR.addEncodedQuery(sysparam_query);
-					childGR.addQuery("child.sys_class_name", "NOT IN", this.hard_excluded_classes.toString());
-					childGR.addQuery("parent.sys_class_name", "NOT IN", this.hard_excluded_classes.toString());
-					childGR.query();
-					while (childGR.next()) {
-						var childObj = {};
-						childObj.parent_name = childGR.getDisplayValue("parent");
-						childObj.parent_name = childObj.parent_name.replace(/\\/g, "/");
-						childObj.parent_id = childGR.getValue("parent");
-						childObj.parent_class = childGR.parent.sys_class_name.getDisplayValue();
-						childObj.parent_class_value = childGR.parent.sys_class_name.toString();
-						childObj.child_id = childGR.getValue("child");
-						childObj.child_name = childGR.getDisplayValue("child");
-						childObj.child_name = childObj.child_name.replace(/\\/g, "/");
-						childObj.child_class = childGR.child.sys_class_name.getDisplayValue();
-						childObj.child_class_value = childGR.child.sys_class_name.toString();
-						var alertCount = 0;
-						var impact = 0;
-						impact = this.getImpactStatusOfCI(childObj.child_id);
-						var alertCountResponse = this.getAggregate("em_alert", "state!=closed^cmdb_ci=" + childObj.child_id, "COUNT", "sys_id", "cmdb_ci", "1");
-						if (alertCountResponse.length > 0) {
-							alertCount = alertCountResponse[0].COUNT;
-						}
-						var childRow = '["' + childObj.child_class + "||" + childObj.child_class_value + '",' + 0 + ',"' + childObj.parent_name + "||" + childObj.parent_id + '","' + childObj.child_name + "||" + childObj.child_id + '",' + impact + ',' + alertCount + '],';
-						topologyRows += childRow;
-						nextParentIds.push(childObj.child_id);
-					}
-				}
-				parentIds = nextParentIds;
-				childDepthLimit -= 1;
-			}
-
-			if(topologyRows.charAt(topologyRows.length - 1)==',')
-				topologyRows=topologyRows.substring(0, topologyRows.length - 1);
-			topologyRows+="]}";
-			return topologyRows;
-		} catch (error) {
-			return error;
+		if (sysparam_query) {
+			alertGr.addEncodedQuery(sysparam_query);
 		}
+		if (tagSysparam != "") {
+			alertGr.addEncodedQuery(tagSysparam);
+		}
+		if (ciIds.length > 0) {
+			alertGr.addQuery("cmdb_ci","IN", ciIds.toString());
+		}
+		if (startTime && endTime) {
+			alertGr.addEncodedQuery(timerangeColumn + 'BETWEEN' + start + '@' + end);
+		}
+		alertGr.setLimit(limit);
+		alertGr.chooseWindow(pageWindow[0], pageWindow[1]);
+		if (sortBy != "") {
+			if (sortDirection == "ASC") {
+				alertGr.orderBy(sortBy);
+			} else {
+				alertGr.orderByDesc(sortBy);
+			}
+		}
+		alertGr.query();
+		var responseData = [];
+		
+		while (alertGr.next())
+        {	
+			var alert = new Object();
+			alert.updated_relative_time = this.createRelativeTimeString(alertGr.getValue("sys_updated_on"));
+			alert.created_relative_time = this.createRelativeTimeString(alertGr.getValue("sys_created_on"));
+			alert.sys_created_on = this.convertSysCreatedStrToMS(alertGr.getValue("sys_created_on"));
+			
+			alert.AlertId=alertGr.getValue("number");
+			alert.Incident=alertGr.getDisplayValue("incident");
+			alert.IncidentSysID=alertGr.getValue("incident");
+			alert.incidentPriority = parseInt(alertGr.incident.priority.toString());
+			alert.Group=alertGr.getDisplayValue("group_source");
+			alert.Severity  = alertGr.getDisplayValue("severity");
+			alert.Priortity =alertGr.getDisplayValue("sn_priority_group");
+			alert.State  = alertGr.getDisplayValue("state");
+			alert.Acknowledged =alertGr.getDisplayValue("acknowledged");
+			alert.Summary=alertGr.getDisplayValue("message_key");
+			alert.CI=alertGr.getDisplayValue("cmdb_ci");
+			alert.CIClass = alertGr.cmdb_ci.sys_class_name.getDisplayValue();
+			alert.CISysID = alertGr.getValue("cmdb_ci");
+			alert.MetricName=alertGr.getDisplayValue("metric_name");
+			alert.Resource=alertGr.getDisplayValue("resource");
+			alert.Source=alertGr.getDisplayValue("source");
+			alert.Maintenance=alertGr.getDisplayValue("maintenance");
+			alert.Description=alertGr.getValue("description");
+			alert.EventCount=parseInt(alertGr.getValue("event_count"));
+			alert.IsGroup=alertGr.getDisplayValue("is_group_alert");
+			alert.SeverityNum  = parseInt(alertGr.getValue("severity"));
+			alert.PriortityNum =parseInt(alertGr.getValue("sn_priority_group"));
+			alert.Updated = this.convertSysCreatedStrToMS(alertGr.getValue("sys_updated_on"));
+			alert.last_event_time = this.convertSysCreatedStrToMS(alertGr.getValue("last_event_time"));
+			alert.sys_id=alertGr.getValue("sys_id");
+			alert.additional_info=alertGr.getValue("additional_info");
+			alert.type = alertGr.getDisplayValue('type');
+			alert.uiAction = "UI Actions";
+			alert.annotationText = '<p>' + alert.Description + '<p/><a href="/d/tI7kwUKnz?var-ci=' + alert.CISysID + '" rel="noopener noreferrer" target="_blank">' + alert.CI + ' CI Details<a/>';
+			
+			try {
+				var additional_info_json = JSON.parse(alert.additional_info);
+				alert.anomaly_count = parseInt(additional_info_json.sn_anomaly_current);
+			} catch (e) {}
+			alert.node = alertGr.getDisplayValue("node");
+			alert.start_time = this.convertSysCreatedStrToMS(alertGr.getValue("sys_created_on"));
+			
+			alert.secondary_alerts = 0;
+			alert.secondary_distinct_sources = 0;
+			if (alert.Group != "Secondary" && alert.Group != "") {
+				alert.drilldownSysID = alert.sys_id;
+				var secondaryGr = new GlideAggregate("em_alert");
+				secondaryGr.addQuery("parent", alert.sys_id);
+				secondaryGr.addAggregate("COUNT", "sys_id");
+				secondaryGr.groupBy("parent");
+				secondaryGr.query();
+				if (secondaryGr.next()) {
+					alert.secondary_alerts = parseInt(secondaryGr.getAggregate("COUNT", "sys_id"));
+				}
+				
+				var distinctSourceGr = new GlideAggregate("em_alert");
+				distinctSourceGr.addQuery("parent", alert.sys_id);
+				distinctSourceGr.addAggregate("COUNT", "sys_id");
+				distinctSourceGr.groupBy("source");
+				distinctSourceGr.query();
+				while (distinctSourceGr.next()) {
+					alert.secondary_distinct_sources += 1;
+				}
+			} else {
+				alert.drilldownSysID = alertGr.getValue("parent");
+			}
+			
+			alert.impactedServicesCount = alertGr.getValue('sn_services');
+			alert.impactedServices = "";
+			if (alert.impactedServicesCount > 0) {
+				var impactedSysIDs = new global.EvtMgmtAlertsInGroupAPI().getImpactedServicesForAlert(alert.sys_id);
+				var endSubstring = this.findNthIndex(impactedSysIDs, ",", 3);
+				if (endSubstring == -1) {
+					endSubstring = impactedSysIDs.length;
+				}
+				var impactedServiceSysIDs = impactedSysIDs.substring(0, endSubstring);
+				var serviceGr = new GlideRecordSecure("cmdb_ci_service");
+				serviceGr.addEncodedQuery("sys_idIN" + impactedServiceSysIDs);
+				serviceGr.orderBy("name");
+				serviceGr.setLimit(3);
+				serviceGr.query();
+				while (serviceGr.next()) {
+					alert.impactedServices += serviceGr.getDisplayValue("name") + ",";
+				}
+				if (alert.impactedServices.charAt(alert.impactedServices.length - 1) == ",")
+					alert.impactedServices = alert.impactedServices.substring(0, alert.impactedServices.length - 1);
+			}
+			responseData.push(alert);
+		}
+		
+		return responseData;
 	},
 	getAllMetrics: function (sysparam) {
 		var gr = new GlideRecordSecure('sa_metric_map');
@@ -1608,7 +1588,7 @@ GrafanaAPIBackend.prototype = {
 		for(var i = 0; i < aggArray.length; i++) {
 			aggArray[i].geohash = this.getGeohash(aggArray[i][regionColumn]);
 		}
-		return JSON.stringify(aggArray);
+		return aggArray;
 	},
 	getGeohash: function (regionName) {
 		var geohash = regionName;
@@ -2005,151 +1985,6 @@ GrafanaAPIBackend.prototype = {
         }
         return cis;
 	},
-	getAlertsByCI: function (ciId, filter, query, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn, tagSysparam) {
-		if (startTime && endTime) {
-			var start = new GlideDateTime();
-			start.subtract(start.getNumericValue());// gets the date to 0
-			start.add(startTime);
-
-			var end = new GlideDateTime();
-			end.subtract(end.getNumericValue());
-			end.add(endTime);
-		}
-		
-		var queryFilter;
-		if (filter != "")
-			queryFilter=filter;
-		var sysparam_query;
-		if (query != "")
-			sysparam_query=query;
-		var pageWindow = this.getPageWindow(limit, page);
-		var alertGr = new GlideRecordSecure('em_alert');
-		if (queryFilter) {
-			alertGr.addQuery('state','IN',queryFilter);
-		}
-		if (sysparam_query) {
-			alertGr.addEncodedQuery(sysparam_query);
-		}
-		if (tagSysparam != "") {
-			alertGr.addEncodedQuery(tagSysparam);
-		}
-		if (ciId != "") {
-			alertGr.addQuery("cmdb_ci", ciId);
-		}
-		if (startTime && endTime) {
-			alertGr.addEncodedQuery(timerangeColumn + 'BETWEEN' + start + '@' + end);
-		}
-		alertGr.setLimit(limit);
-		alertGr.chooseWindow(pageWindow[0], pageWindow[1]);
-		if (sortBy != "") {
-			if (sortDirection == "ASC") {
-				alertGr.orderBy(sortBy);
-			} else {
-				alertGr.orderByDesc(sortBy);
-			}
-		}
-		alertGr.query();
-		var alertsStr="";
-		
-		while (alertGr.next())
-        {	
-			var alert = new Object();
-			alert.updated_relative_time = this.createRelativeTimeString(alertGr.getValue("sys_updated_on"));
-			alert.created_relative_time = this.createRelativeTimeString(alertGr.getValue("sys_created_on"));
-			alert.sys_created_on = this.convertSysCreatedStrToMS(alertGr.getValue("sys_created_on"));
-			
-			alert.AlertId=alertGr.getValue("number");
-			alert.Incident=alertGr.getDisplayValue("incident");
-			alert.IncidentSysID=alertGr.getValue("incident");
-			alert.incidentPriority = parseInt(alertGr.incident.priority.toString());
-			alert.Group=alertGr.getDisplayValue("group_source");
-			alert.Severity  = alertGr.getDisplayValue("severity");
-			alert.Priortity =alertGr.getDisplayValue("sn_priority_group");
-			alert.State  = alertGr.getDisplayValue("state");
-			alert.Acknowledged =alertGr.getDisplayValue("acknowledged");
-			alert.Summary=alertGr.getDisplayValue("message_key");
-			alert.CI=alertGr.getDisplayValue("cmdb_ci");
-			alert.CIClass = alertGr.cmdb_ci.sys_class_name.getDisplayValue();
-			alert.CISysID = alertGr.getValue("cmdb_ci");
-			alert.MetricName=alertGr.getDisplayValue("metric_name");
-			alert.Resource=alertGr.getDisplayValue("resource");
-			alert.Source=alertGr.getDisplayValue("source");
-			alert.Maintenance=alertGr.getDisplayValue("maintenance");
-			alert.Description=alertGr.getValue("description");
-			alert.EventCount=parseInt(alertGr.getValue("event_count"));
-			alert.IsGroup=alertGr.getDisplayValue("is_group_alert");
-			alert.SeverityNum  = parseInt(alertGr.getValue("severity"));
-			alert.PriortityNum =parseInt(alertGr.getValue("sn_priority_group"));
-			alert.Updated = this.convertSysCreatedStrToMS(alertGr.getValue("sys_updated_on"));
-			alert.last_event_time = this.convertSysCreatedStrToMS(alertGr.getValue("last_event_time"));
-			alert.sys_id=alertGr.getValue("sys_id");
-			alert.additional_info=alertGr.getValue("additional_info");
-			alert.type = alertGr.getDisplayValue('type');
-			alert.uiAction = "UI Actions";
-			alert.annotationText = '<p>' + alert.Description + '<p/><a href="/d/tI7kwUKnz?var-ci=' + alert.CISysID + '" rel="noopener noreferrer" target="_blank">' + alert.CI + ' CI Details<a/>';
-			
-			try {
-				var additional_info_json = JSON.parse(alert.additional_info);
-				alert.anomaly_count = parseInt(additional_info_json.sn_anomaly_current);
-			} catch (e) {}
-			alert.node = alertGr.getDisplayValue("node");
-			alert.start_time = this.convertSysCreatedStrToMS(alertGr.getValue("sys_created_on"));
-			
-			alert.secondary_alerts = 0;
-			alert.secondary_distinct_sources = 0;
-			if (alert.Group != "Secondary" && alert.Group != "") {
-				alert.drilldownSysID = alert.sys_id;
-				var secondaryGr = new GlideAggregate("em_alert");
-				secondaryGr.addQuery("parent", alert.sys_id);
-				secondaryGr.addAggregate("COUNT", "sys_id");
-				secondaryGr.groupBy("parent");
-				secondaryGr.query();
-				if (secondaryGr.next()) {
-					alert.secondary_alerts = parseInt(secondaryGr.getAggregate("COUNT", "sys_id"));
-				}
-				
-				var distinctSourceGr = new GlideAggregate("em_alert");
-				distinctSourceGr.addQuery("parent", alert.sys_id);
-				distinctSourceGr.addAggregate("COUNT", "sys_id");
-				distinctSourceGr.groupBy("source");
-				distinctSourceGr.query();
-				while (distinctSourceGr.next()) {
-					alert.secondary_distinct_sources += 1;
-				}
-			} else {
-				alert.drilldownSysID = alertGr.getValue("parent");
-			}
-			
-			alert.impactedServicesCount = alertGr.getValue('sn_services');
-			alert.impactedServices = "";
-			if (alert.impactedServicesCount > 0) {
-				var impactedSysIDs = new global.EvtMgmtAlertsInGroupAPI().getImpactedServicesForAlert(alert.sys_id);
-				var endSubstring = this.findNthIndex(impactedSysIDs, ",", 3);
-				if (endSubstring == -1) {
-					endSubstring = impactedSysIDs.length;
-				}
-				var impactedServiceSysIDs = impactedSysIDs.substring(0, endSubstring);
-				var serviceGr = new GlideRecordSecure("cmdb_ci_service");
-				serviceGr.addEncodedQuery("sys_idIN" + impactedServiceSysIDs);
-				serviceGr.orderBy("name");
-				serviceGr.setLimit(3);
-				serviceGr.query();
-				while (serviceGr.next()) {
-					alert.impactedServices += serviceGr.getDisplayValue("name") + ",";
-				}
-				if (alert.impactedServices.charAt(alert.impactedServices.length - 1) == ",")
-					alert.impactedServices = alert.impactedServices.substring(0, alert.impactedServices.length - 1);
-			}
-			
-			var jsonString= JSON.stringify(alert);
-			alertsStr+=jsonString;
-			alertsStr+=",";
-		}
-		if (alertsStr.charAt(alertsStr.length - 1) == ",")
-			alertsStr=alertsStr.substring(0, alertsStr.length - 1);
-		
-		return(alertsStr);
-	},
 	getAllResourcesFromMetricTbl: function (strQuery) {
 		var resources = [];
 		
@@ -2314,13 +2149,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>133</sys_mod_count>
+        <sys_mod_count>154</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
-        <sys_updated_by>optimiz</sys_updated_by>
-        <sys_updated_on>2023-11-22 19:24:14</sys_updated_on>
+        <sys_updated_by>bstill-routley</sys_updated_by>
+        <sys_updated_on>2023-11-22 21:19:15</sys_updated_on>
     </sys_script_include>
 </record_update>

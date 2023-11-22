@@ -28,7 +28,7 @@
 	var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
 	
 	var outages=metricData.getOutageStatus(ciIds, showPercent, sysparam, limit, page);
-	writer.writeString(outages);
+	response.setBody(outages);
 
 })(request, response);]]></operation_script>
         <operation_uri>/api/x_opti8_itom_grafa/grafana_api/v1/query/outage</operation_uri>
@@ -44,14 +44,14 @@
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 20:00:56</sys_created_on>
         <sys_id>9e2df0721b348990ba4d15c61a4bcbd2</sys_id>
-        <sys_mod_count>2</sys_mod_count>
+        <sys_mod_count>3</sys_mod_count>
         <sys_name>V1-Query-Outage</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy/>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_ws_operation_9e2df0721b348990ba4d15c61a4bcbd2</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2022-10-18 19:38:13</sys_updated_on>
+        <sys_updated_on>2023-11-22 19:58:53</sys_updated_on>
         <web_service_definition display_value="Grafana API">e579f07e1bf08990ba4d15c61a4bcb4f</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>

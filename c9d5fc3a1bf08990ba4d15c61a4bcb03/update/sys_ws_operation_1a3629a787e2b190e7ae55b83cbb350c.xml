@@ -41,7 +41,7 @@
 		// Send Request to API with extracted data from Grafana that ServiceNow understands
 		var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
 		var metricValues = metricData.getLatestSingleMetric(ciId, metricId, resourceName, startTimeInput, endTimeInput);
-		writer.writeString(metricValues);
+		response.setBody(metricValues);
 	}
 	
 })(request, response);]]></operation_script>
@@ -58,14 +58,14 @@
         <sys_created_by>optimiz</sys_created_by>
         <sys_created_on>2023-11-22 19:19:23</sys_created_on>
         <sys_id>1a3629a787e2b190e7ae55b83cbb350c</sys_id>
-        <sys_mod_count>0</sys_mod_count>
+        <sys_mod_count>1</sys_mod_count>
         <sys_name>V1-Query-Latest_Single_Metric</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy/>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_ws_operation_1a3629a787e2b190e7ae55b83cbb350c</sys_update_name>
-        <sys_updated_by>optimiz</sys_updated_by>
-        <sys_updated_on>2023-11-22 19:19:23</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-11-22 19:57:01</sys_updated_on>
         <web_service_definition display_value="Grafana API">e579f07e1bf08990ba4d15c61a4bcb4f</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>
