@@ -23,7 +23,7 @@
         <scoped_administration>false</scoped_administration>
         <short_description>Enables visualisation of ITOM data inside Grafana</short_description>
         <source>x_opti8_itom_grafa</source>
-        <store_correlation_id>REPOAPP0001244314</store_correlation_id>
+        <store_correlation_id>REPOAPP0001244369</store_correlation_id>
         <store_url>https://tpp.servicenow.com/sn_appstore_s</store_url>
         <subscription_entitlement/>
         <sys_class_name>sys_app</sys_class_name>
@@ -31,16 +31,16 @@
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:28:38</sys_created_on>
         <sys_id>c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_id>
-        <sys_mod_count>21</sys_mod_count>
+        <sys_mod_count>23</sys_mod_count>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2024-04-01 17:18:56</sys_updated_on>
+        <sys_updated_on>2024-04-01 18:24:36</sys_updated_on>
         <template/>
         <trackable>true</trackable>
         <uninstall_blocked>false</uninstall_blocked>
         <user_role display_value="itil" name="itil">282bf1fac6112285017366cb5f867469</user_role>
         <vendor/>
         <vendor_prefix/>
-        <version>1.7.3</version>
+        <version>1.7.4</version>
     </sys_app>
     <sys_attachment action="INSERT_OR_UPDATE">
         <average_image_color/>
