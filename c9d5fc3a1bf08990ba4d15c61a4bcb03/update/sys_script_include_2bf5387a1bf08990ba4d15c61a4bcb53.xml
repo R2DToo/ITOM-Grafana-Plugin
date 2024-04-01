@@ -258,14 +258,24 @@ GrafanaAPIBackend.prototype = {
 				response.nodes[x].arc__impact_warning = 0;
 				response.nodes[x].arc__impact_ok = 0;
 				response.nodes[x].detail__impact = "Clear";
-				var count_alerts_response = this.getAggregate("em_alert", "state!=closed^cmdb_ci=" + response.nodes[x].id, "COUNT", "sys_id", "cmdb_ci", "1");
+
+				var doesAlertTableExist = this.doesTableExist("em_alert");
+				var count_alerts_response = [];
+				if (doesAlertTableExist == true) {
+					count_alerts_response = this.getAggregate("em_alert", "state!=closed^cmdb_ci=" + response.nodes[x].id, "COUNT", "sys_id", "cmdb_ci", "1");
+				}
+				
 				var count = 0;
 				if (count_alerts_response.length > 0) {
 					count = count_alerts_response[0].COUNT;
 				}
 				response.nodes[x].mainstat = count.toString() + " Active Alerts";
 				
-				var impact = this.getImpactStatusOfCI(response.nodes[x].id);
+				var doesImpactStatusTableExist = this.doesTableExist("em_impact_status");
+				var impact = 5;
+				if (doesImpactStatusTableExist == true) {
+					impact = this.getImpactStatusOfCI(response.nodes[x].id);
+				}
 				switch (impact) {
 					case 0:
 						response.nodes[x].arc__impact_clear = 1;
@@ -302,31 +312,6 @@ GrafanaAPIBackend.prototype = {
 			return response;
 		}
 		return response;
-	},
-	queryUIActions: function (table, sysparam, sortBy, limit, page) {
-		var returnActions = [];
-		var pageWindow = this.getPageWindow(limit, page);
-		var actionGr = new GlideRecordSecure('sys_ui_action');
-		if (table != "") {
-			actionGr.addQuery('table', table);
-		}
-		if (sysparam != "") {
-			actionGr.addEncodedQuery(sysparam);
-		} else {
-			actionGr.addQuery('active', 'true');
-			actionGr.addQuery('client', 'false');
-		}
-		actionGr.orderBy(sortBy);
-		actionGr.setLimit(limit);
-		actionGr.chooseWindow(pageWindow[0], pageWindow[1]);
-		actionGr.query();
-		while (actionGr.next()) {
-			var action = {};
-			action.name = actionGr.getDisplayValue('name');
-			action.sys_id = actionGr.getValue('sys_id');
-			returnActions.push(action);
-		}
-		return JSON.stringify(returnActions);
 	},
 	getAlertAnomaly: function (columns, sysparam_query, sortBy, sortDirection, limit, page) {
 		var anomalyValues = [];
@@ -427,7 +412,14 @@ GrafanaAPIBackend.prototype = {
 			}
 			columnArray.push(column);
 		}
-		return columnArray;
+		// Remove duplicates from the final array caused by parent classes that contain the same fields
+		var finalArray = columnArray.filter(function(el, i, arr) {
+			var firstOccurence = !arr.some(function(testEl, testI) {
+				return testEl.value == el.value && testI < i;
+			});
+			return firstOccurence;
+		});
+		return finalArray;
 	},
 	getMetricNamesFromCIs: function (ciIdMatch,type) {
 		var queryStr = "";
@@ -1395,9 +1387,9 @@ GrafanaAPIBackend.prototype = {
 		return dataSet;
 	},
 	getAlerts: function(ciId, alertType, alertState, sysparam, limit, page, sortBy, sortDirection, startTime, endTime, timerangeColumn, tagFilters) {
-		var alertStateFilter="Open,Reopen";
+		var alertStateFilter="stateINOpen,Reopen";
 		if (alertState == "All")
-			alertStateFilter="Open,Reopen,Closed";
+			alertStateFilter="";
 		var sysparam_query="";
 		if (sysparam != "")
 			sysparam_query = sysparam;
@@ -1407,7 +1399,7 @@ GrafanaAPIBackend.prototype = {
 		else if (alertType=="ci")
 			cis = this.getValuesByNameMatch(ciId, "|");
 		else if (alertType=="none")
-			cis=[""];
+			cis=[];
 		var tagSysparam = "";
 		if (tagFilters != "") {
 			tagSysparam = this.createTagSysparam(tagFilters, 'additional_info');
@@ -1427,17 +1419,14 @@ GrafanaAPIBackend.prototype = {
 			end.subtract(end.getNumericValue());
 			end.add(endTime);
 		}
-		
-		var queryFilter;
-		if (filter != "")
-			queryFilter=filter;
+
 		var sysparam_query;
 		if (query != "")
 			sysparam_query=query;
 		var pageWindow = this.getPageWindow(limit, page);
 		var alertGr = new GlideRecordSecure('em_alert');
-		if (queryFilter) {
-			alertGr.addQuery('state','IN',queryFilter);
+		if (filter != "") {
+			alertGr.addEncodedQuery(filter);
 		}
 		if (sysparam_query) {
 			alertGr.addEncodedQuery(sysparam_query);
@@ -1928,6 +1917,9 @@ GrafanaAPIBackend.prototype = {
 		return hex16;
 	},
 	compressLog: function (raw_message) {
+		if (raw_message == "") {
+			return raw_message;
+		}
 		var jsonMessage = JSON.parse(raw_message);
 		var returnMessage = {};
 		returnMessage.message = jsonMessage.message;
@@ -2149,13 +2141,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>154</sys_mod_count>
+        <sys_mod_count>164</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
-        <sys_updated_by>bstill-routley</sys_updated_by>
-        <sys_updated_on>2023-11-22 21:19:15</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2024-03-27 19:38:35</sys_updated_on>
     </sys_script_include>
 </record_update>

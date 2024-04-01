@@ -13,7 +13,7 @@
         <license_category>none</license_category>
         <license_definition/>
         <license_model>none</license_model>
-        <logo/>
+        <logo>9869fd8d871c8a10b9b28b9acebb35fd</logo>
         <menu display_value="ITOM Grafana Plugin">80e98e8e47be615035b92422736d4365</menu>
         <name>ITOM Grafana Plugin</name>
         <private>false</private>
@@ -31,15 +31,54 @@
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:28:38</sys_created_on>
         <sys_id>c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_id>
-        <sys_mod_count>17</sys_mod_count>
-        <sys_updated_by>optimiz</sys_updated_by>
-        <sys_updated_on>2023-11-22 19:24:55</sys_updated_on>
+        <sys_mod_count>20</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2024-04-01 16:24:38</sys_updated_on>
         <template/>
         <trackable>true</trackable>
         <uninstall_blocked>false</uninstall_blocked>
-        <user_role/>
+        <user_role display_value="itil" name="itil">282bf1fac6112285017366cb5f867469</user_role>
         <vendor/>
         <vendor_prefix/>
-        <version>1.7.2</version>
+        <version>1.7.3</version>
     </sys_app>
+    <sys_attachment action="INSERT_OR_UPDATE">
+        <average_image_color/>
+        <chunk_size_bytes>700000</chunk_size_bytes>
+        <compressed>true</compressed>
+        <content_type>image/svg+xml</content_type>
+        <file_name>logo</file_name>
+        <hash>fe3c86636a6b91601beddfd79de889335fa64dab70dad299b3a8996fe166554c</hash>
+        <image_height/>
+        <image_width/>
+        <size_bytes>494</size_bytes>
+        <size_compressed>303</size_compressed>
+        <state>available</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2024-02-10 02:07:37</sys_created_on>
+        <sys_id>9869fd8d871c8a10b9b28b9acebb35fd</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_updated_by>system</sys_updated_by>
+        <sys_updated_on>2024-02-10 02:07:37</sys_updated_on>
+        <table_name>ZZ_YYsys_app</table_name>
+        <table_sys_id>c9d5fc3a1bf08990ba4d15c61a4bcb03</table_sys_id>
+    </sys_attachment>
+    <sys_attachment_doc action="INSERT_OR_UPDATE">
+        <data>H4sIAAAAAAAAAA==</data>
+        <length>16</length>
+        <position>0</position>
+        <sys_attachment display_value="logo" sys_id="9869fd8d871c8a10b9b28b9acebb35fd">9869fd8d871c8a10b9b28b9acebb35fd</sys_attachment>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2024-02-10 02:07:37</sys_created_on>
+        <sys_id>1069fd8d871c8a10b9b28b9acebb35fe</sys_id>
+    </sys_attachment_doc>
+    <sys_attachment_doc action="INSERT_OR_UPDATE">
+        <data>tZDNboMwDIDvk/YOnnctIYEgoGpaaTt0h/ayn95RSSEbjVFIC48/mNZOfYBZViR/cuxPXqyGYwNn7TpDVqFgHEHbPZXGVgpP/hBkuFouHoIAPtqGilKX4GkOb7s1vOqWZtD3PevOlRsLtqfjDNbaald4cn9dsDWDdvBO1HQQBMv7u8X4BXpT+lphxnk7INTaVLW/lmej+ycaFHLgEMkxEQ6maRRashph9Ladwtr7dh6Gk0UfM3JVGHHOw3E8TmvawtdQKtxKSHYif5YgcpYkUQySSZmmEUQckvF5ETlC5x19aYWP/CcuIPgVja6gMVbvi1aho5Mtb/AnGXvh4Y2CyCDfiBhEzPIxNoKzBIRgMs+zTQpCTjj7J4vpIstvkdWLBe4BAAA=</data>
+        <length>392</length>
+        <position>1</position>
+        <sys_attachment display_value="logo" sys_id="9869fd8d871c8a10b9b28b9acebb35fd">9869fd8d871c8a10b9b28b9acebb35fd</sys_attachment>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2024-02-10 02:07:37</sys_created_on>
+        <sys_id>9069fd8d871c8a10b9b28b9acebb35fe</sys_id>
+    </sys_attachment_doc>
 </record_update>
