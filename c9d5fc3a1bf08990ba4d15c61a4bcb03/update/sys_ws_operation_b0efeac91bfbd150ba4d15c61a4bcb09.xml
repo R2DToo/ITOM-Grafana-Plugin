@@ -17,11 +17,17 @@
     response.setContentType('application/json');
 	response.setStatus(200);
 	var APIBackend = new x_opti8_itom_grafa.GrafanaAPIBackend();
-	
-	//var backendResponse = APIBackend.queryNodeGraph("451047c6c0a8016400de0ae6df9b9d76", 1, 1, [], []);
-	var backendResponse = APIBackend.queryNodeGraph(starting_point, parent_limit, child_limit, relationship_types, excluded_classes);
-	response.setBody(backendResponse);
-
+	var isTableAllowed = APIBackend.isTableAllowed("cmdb_rel_ci");
+	if (isTableAllowed.allowed == false) {
+		response.setError(new sn_ws_err.BadRequestError(isTableAllowed.message));
+	} else {
+		var backendResponse = APIBackend.queryNodeGraph(starting_point, parent_limit, child_limit, relationship_types, excluded_classes);
+		if (typeof backendResponse == "string") {
+			response.setError(new sn_ws_err.BadRequestError(backendResponse));
+		} else {
+			response.setBody(backendResponse);
+		}
+	}
 })(request, response);]]></operation_script>
         <operation_uri>/api/x_opti8_itom_grafa/grafana_api/v1/query/node-graph</operation_uri>
         <produces>application/json,application/xml,text/xml</produces>
@@ -36,14 +42,14 @@
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-12-14 17:15:01</sys_created_on>
         <sys_id>b0efeac91bfbd150ba4d15c61a4bcb09</sys_id>
-        <sys_mod_count>19</sys_mod_count>
+        <sys_mod_count>21</sys_mod_count>
         <sys_name>V1-Query-Node-Graph</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy/>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_ws_operation_b0efeac91bfbd150ba4d15c61a4bcb09</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2024-04-01 17:52:56</sys_updated_on>
+        <sys_updated_on>2024-04-24 16:45:46</sys_updated_on>
         <web_service_definition display_value="Grafana API">e579f07e1bf08990ba4d15c61a4bcb4f</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>

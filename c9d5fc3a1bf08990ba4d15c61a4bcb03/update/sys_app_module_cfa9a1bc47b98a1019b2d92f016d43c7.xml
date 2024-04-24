@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_app_module">
+    <sys_app_module action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <application display_value="ITOM Grafana Plugin">80e98e8e47be615035b92422736d4365</application>
+        <assessment/>
+        <device_type/>
+        <filter/>
+        <hint/>
+        <homepage/>
+        <image/>
+        <link_type>LIST</link_type>
+        <map_page/>
+        <mobile_title>Allowed Tables</mobile_title>
+        <mobile_view_name>Mobile</mobile_view_name>
+        <name>x_opti8_itom_grafa_allowed_tables</name>
+        <order/>
+        <override_menu_roles>false</override_menu_roles>
+        <query/>
+        <report/>
+        <roles>itil</roles>
+        <sys_class_name>sys_app_module</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2024-04-23 19:54:41</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>cfa9a1bc47b98a1019b2d92f016d43c7</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>Allowed Tables List</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
+        <sys_update_name>sys_app_module_cfa9a1bc47b98a1019b2d92f016d43c7</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2024-04-24 18:46:53</sys_updated_on>
+        <timeline_page/>
+        <title>Allowed Tables List</title>
+        <uncancelable>false</uncancelable>
+        <view_name/>
+        <window_name/>
+    </sys_app_module>
+</record_update>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="e1b8a17c47b98a1019b2d92f016d435c" label="Allowed Tables List" max_length="40" name="x_opti8_itom_grafa_allowed_tables" type="collection">
+        <element default="true" label="Active" max_length="40" name="active" type="boolean"/>
+        <element label="Description" max_length="1000" name="description" type="string"/>
+        <element label="Table" mandatory="true" max_length="80" name="table" type="table_name"/>
+    </element>
+</database>

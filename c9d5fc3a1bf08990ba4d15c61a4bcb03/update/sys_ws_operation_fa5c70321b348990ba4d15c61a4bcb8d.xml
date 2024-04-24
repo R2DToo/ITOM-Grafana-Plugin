@@ -52,8 +52,11 @@
 	var writer = response.getStreamWriter();
 	
 	var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
+	var isTableAllowed = metricData.isTableAllowed("em_alert");
 	var doesTableExist = metricData.doesTableExist("em_alert");
-	if (doesTableExist.tableExists == false) {
+	if (isTableAllowed.allowed == false) {
+		response.setError(new sn_ws_err.BadRequestError(isTableAllowed.message));
+	} else if (doesTableExist.tableExists == false) {
 		response.setError(new sn_ws_err.BadRequestError("The table requested does not exist"));
 	} else if (alertType == "") {
 		response.setError(new sn_ws_err.BadRequestError("Alert type not provided"));
@@ -75,10 +78,12 @@
 			timerangeColumn,
 			tagFilters
 		);
-
-		response.setBody(metricValues);
+		if (typeof metricValues == "string") {
+			response.setError(new sn_ws_err.BadRequestError(metricValues));
+		} else {
+			response.setBody(metricValues);
+		}
 	}
-	
 })(request, response);]]></operation_script>
         <operation_uri>/api/x_opti8_itom_grafa/grafana_api/v1/query/alerts</operation_uri>
         <produces>application/json,application/xml,text/xml</produces>
@@ -93,14 +98,14 @@
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:57:35</sys_created_on>
         <sys_id>fa5c70321b348990ba4d15c61a4bcb8d</sys_id>
-        <sys_mod_count>12</sys_mod_count>
+        <sys_mod_count>16</sys_mod_count>
         <sys_name>V1-Query-Alerts</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy/>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_ws_operation_fa5c70321b348990ba4d15c61a4bcb8d</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2024-03-15 21:00:45</sys_updated_on>
+        <sys_updated_on>2024-04-24 18:22:45</sys_updated_on>
         <web_service_definition display_value="Grafana API">e579f07e1bf08990ba4d15c61a4bcb4f</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>

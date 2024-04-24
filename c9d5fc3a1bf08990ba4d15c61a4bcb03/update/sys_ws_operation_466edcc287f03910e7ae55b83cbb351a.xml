@@ -13,17 +13,29 @@
 	var sysparam = request.body.data.sysparam || "";
 	
 	response.setContentType('application/json');
+
 	if (table == "") {
 		response.setError(new sn_ws_err.BadRequestError("Table name not provided"));
 	} else if (groupBy == "") {
 		response.setError(new sn_ws_err.BadRequestError("Group By column not provided"));
+	}
+
+	var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
+	var isTableAllowed = metricData.isTableAllowed(table);
+	var doesTableExist = metricData.doesTableExist(table);
+
+	if (isTableAllowed.allowed == false) {
+		response.setError(new sn_ws_err.BadRequestError(isTableAllowed.message));
+	} else if (doesTableExist.tableExists == false) {
+		response.setError(new sn_ws_err.BadRequestError("The table requested does not exist"));
 	} else {
 		response.setStatus(200);
-		var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
 		var options = metricData.getGroupByVariable(table, groupBy, sysparam);
 
 		response.setBody(options);
 	}
+	
+
 	
 })(request, response);]]></operation_script>
         <operation_uri>/api/x_opti8_itom_grafa/grafana_api/v1/variable/groupby</operation_uri>
@@ -39,14 +51,14 @@
         <sys_created_by>optimiz</sys_created_by>
         <sys_created_on>2023-08-22 22:24:19</sys_created_on>
         <sys_id>466edcc287f03910e7ae55b83cbb351a</sys_id>
-        <sys_mod_count>2</sys_mod_count>
+        <sys_mod_count>3</sys_mod_count>
         <sys_name>V1-Variable-GroupBy</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy/>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_ws_operation_466edcc287f03910e7ae55b83cbb351a</sys_update_name>
-        <sys_updated_by>optimiz</sys_updated_by>
-        <sys_updated_on>2023-08-23 01:58:13</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2024-04-24 18:00:29</sys_updated_on>
         <web_service_definition display_value="Grafana API">e579f07e1bf08990ba4d15c61a4bcb4f</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>

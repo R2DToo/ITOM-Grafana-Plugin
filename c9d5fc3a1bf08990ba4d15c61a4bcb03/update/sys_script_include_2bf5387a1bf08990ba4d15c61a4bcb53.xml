@@ -36,6 +36,21 @@ GrafanaAPIBackend.prototype = {
 	doesTableExist: function (table) {
 		return {tableExists: gs.tableExists(table)};
 	},
+	isTableAllowed: function (table) {
+		var tableAllowed = {
+			allowed: false, 
+			message: "The " + table + " table you requested is not on the Allowed Tables List. Please ask your ServiceNow administrator to add an entry for the " + table + " table into the Allowed Tables List (x_opti8_itom_grafa_allowed_tables)"
+		};
+		var gr = new GlideRecordSecure("x_opti8_itom_grafa_allowed_tables");
+		gr.addQuery("table", table);
+		gr.addQuery("active", true);
+		gr.query();
+		if (gr.hasNext()) {
+			tableAllowed.allowed = true;
+			tableAllowed.message = "";
+		}
+		return tableAllowed;
+	},
 	getNestedCISv2: function (starting_point_sys_id, search_parent_limit, search_child_limit, rel_types, excluded_classes, type) {
 		var full_excluded_classes = this.hard_excluded_classes.concat(excluded_classes);
 		var next_parents = [starting_point_sys_id];
@@ -259,10 +274,15 @@ GrafanaAPIBackend.prototype = {
 				response.nodes[x].arc__impact_ok = 0;
 				response.nodes[x].detail__impact = "Clear";
 
+				var em_alertTableAllowed = this.isTableAllowed("em_alert");
 				var doesAlertTableExist = this.doesTableExist("em_alert");
 				var count_alerts_response = [];
 				if (doesAlertTableExist == true) {
-					count_alerts_response = this.getAggregate("em_alert", "state!=closed^cmdb_ci=" + response.nodes[x].id, "COUNT", "sys_id", "cmdb_ci", "1");
+					if (em_alertTableAllowed.allowed == false) {
+						return em_alertTableAllowed.message;
+					} else {
+						count_alerts_response = this.getAggregate("em_alert", "state!=closed^cmdb_ci=" + response.nodes[x].id, "COUNT", "sys_id", "cmdb_ci", "1");
+					}
 				}
 				
 				var count = 0;
@@ -271,10 +291,15 @@ GrafanaAPIBackend.prototype = {
 				}
 				response.nodes[x].mainstat = count.toString() + " Active Alerts";
 				
+				var em_impact_statusTableAllowed = this.isTableAllowed("em_impact_status");
 				var doesImpactStatusTableExist = this.doesTableExist("em_impact_status");
 				var impact = 5;
 				if (doesImpactStatusTableExist == true) {
-					impact = this.getImpactStatusOfCI(response.nodes[x].id);
+					if (em_impact_statusTableAllowed.allowed == false) {
+						return em_impact_statusTableAllowed.message;
+					} else {
+						impact = this.getImpactStatusOfCI(response.nodes[x].id);
+					}
 				}
 				switch (impact) {
 					case 0:
@@ -460,6 +485,10 @@ GrafanaAPIBackend.prototype = {
 				var metricObj = {};
 				if(type=="GOLDEN")
 				{
+					var isTableAllowed = this.isTableAllowed("sa_metric_dashboard_metadata");
+					if (isTableAllowed.allowed == false) {
+						return isTableAllowed.message;
+					}
 					if(this.isGoldenMetric(metricTypeId)) {
 						metricObj.name = metric_tiny_name;
 						metricObj.id = metric_type_id;
@@ -925,26 +954,26 @@ GrafanaAPIBackend.prototype = {
 		
 		return returnArray;
 	},
-	addExtraAlertData: function(alertObj, tableGR) {
-		alertObj["cmdb_ci.sys_id"] = tableGR.getValue("cmdb_ci");
-		alertObj["incident.priority"] = tableGR.incident.priority.getDisplayValue();
-		alertObj["parent.sys_id"] = tableGR.getValue("parent");
+	// addExtraAlertData: function(alertObj, tableGR) {
+	// 	alertObj["cmdb_ci.sys_id"] = tableGR.getValue("cmdb_ci");
+	// 	alertObj["incident.priority"] = tableGR.incident.priority.getDisplayValue();
+	// 	alertObj["parent.sys_id"] = tableGR.getValue("parent");
 		
-		alertObj.impacted_services_count = tableGR.getValue('sn_services');
-		alertObj.impacted_services = [];
-		if (alertObj["cmdb_ci.sys_id"]) {
-			var ci_assoc_gr = new GlideRecordSecure("svc_ci_assoc");
-			ci_assoc_gr.addQuery("ci_id", alertObj["cmdb_ci.sys_id"]);
-			ci_assoc_gr.query();
-			while (ci_assoc_gr.next()) {
-				alertObj.impacted_services.push(ci_assoc_gr.getDisplayValue("service_id"));
-			}
-		}
-		alertObj.impacted_services = JSON.stringify(alertObj.impacted_services);
-		alertObj.ui_action = "UI Actions";
-		alertObj.annotation_text = '<p>' + tableGR.getDisplayValue("description") + '<p/><a href="/d/tI7kwUKnz?var-ci=' + alertObj["cmdb_ci.sys_id"] + '" rel="noopener noreferrer" target="_blank">' + tableGR.getDisplayValue("cmdb_ci") + ' CI Details<a/>';
-		return alertObj;
-	},
+	// 	alertObj.impacted_services_count = tableGR.getValue('sn_services');
+	// 	alertObj.impacted_services = [];
+	// 	if (alertObj["cmdb_ci.sys_id"]) {
+	// 		var ci_assoc_gr = new GlideRecordSecure("svc_ci_assoc");
+	// 		ci_assoc_gr.addQuery("ci_id", alertObj["cmdb_ci.sys_id"]);
+	// 		ci_assoc_gr.query();
+	// 		while (ci_assoc_gr.next()) {
+	// 			alertObj.impacted_services.push(ci_assoc_gr.getDisplayValue("service_id"));
+	// 		}
+	// 	}
+	// 	alertObj.impacted_services = JSON.stringify(alertObj.impacted_services);
+	// 	alertObj.ui_action = "UI Actions";
+	// 	alertObj.annotation_text = '<p>' + tableGR.getDisplayValue("description") + '<p/><a href="/d/tI7kwUKnz?var-ci=' + alertObj["cmdb_ci.sys_id"] + '" rel="noopener noreferrer" target="_blank">' + tableGR.getDisplayValue("cmdb_ci") + ' CI Details<a/>';
+	// 	return alertObj;
+	// },
 	getAggregate: function(table, sysparam, type, column, groupBy, limit, startTimeInput, endTimeInput, timerangeColumn) {
 		if (startTimeInput && endTimeInput) {
 			var start = new GlideDateTime();
@@ -995,6 +1024,10 @@ GrafanaAPIBackend.prototype = {
 				ciName = ciGr.getDisplayValue("name");
 			}
 			//ciTable is a table with metric fields.
+			var isTableAllowed = this.isTableAllowed(ciTable);
+			if (isTableAllowed.allowed == false) {
+				return isTableAllowed.message;
+			}
 			var metricTableGr = new GlideRecordSecure(ciTable);
 			metricTableGr.addQuery("sys_id", cis[c]);
 			if (sysparam != "")
@@ -1079,7 +1112,11 @@ GrafanaAPIBackend.prototype = {
 					for(var r=0;r<resourceObjs.length;r++)
 					{
 						var metricResponse = this.getLatestSingleMetricObject(ciIds[c], resourceObjs[r].metricName, resourceObjs[r].resourceName, startTime, endTime, sysparam);
-						responseData.push(metricResponse);
+						if (typeof metricResponse == "string") {
+							return metricResponse;
+						} else {
+							responseData.push(metricResponse);
+						}
 					}
 				}
 		}
@@ -1112,6 +1149,10 @@ GrafanaAPIBackend.prototype = {
 			} else {
 				ciName = ciGr.getDisplayValue("name");
 			}
+		}
+		var isTableAllowed = this.isTableAllowed(ciTable);
+		if (isTableAllowed.allowed == false) {
+			return isTableAllowed.message;
 		}
 		var metricTableGr = new GlideRecordSecure(ciTable);
 		metricTableGr.addQuery("sys_id", metricResourceId);
@@ -1180,7 +1221,11 @@ GrafanaAPIBackend.prototype = {
 					for(var r=0;r<resourceObjs.length;r++)
 					{
 						var metricResponse = this.getSingleMetricObject(ciIds[c], resourceObjs[r].metricName, resourceObjs[r].resourceName, startTime, endTime, sysparam);
-						responseData.push(metricResponse);
+						if (typeof metricResponse == "string") {
+							return metricResponse;
+						} else {
+							responseData.push(metricResponse);
+						}
 					}
 				}
 		}
@@ -1212,6 +1257,10 @@ GrafanaAPIBackend.prototype = {
 			} else {
 				ciName = ciGr.getDisplayValue("name");
 			}
+		}
+		var isTableAllowed = this.isTableAllowed(ciTable);
+		if (isTableAllowed.allowed == false) {
+			return isTableAllowed.message;
 		}
 		var metricTableGr = new GlideRecordSecure(ciTable);
 		metricTableGr.addQuery("sys_id", metricResourceId);
@@ -1275,6 +1324,9 @@ GrafanaAPIBackend.prototype = {
 						startTime,
 						endTime
 					);
+					if (typeof metricDataObj == "string") {
+						return metricDataObj;
+					}
 					var obj = {};
 					obj.ci_name = metricIds[m].ciName;
 					obj.metric_name = metricIds[m].metricName;
@@ -1296,7 +1348,10 @@ GrafanaAPIBackend.prototype = {
 		if (ciGr.next()) {
 			ci_table = ciGr.getValue("sys_class_name");
 		}
-		
+		var isTableAllowed = this.isTableAllowed(ci_table);
+		if (isTableAllowed.allowed === false) {
+			return isTableAllowed.message;
+		}
 		var metricTableGr = new GlideRecordSecure(ci_table);
 		metricTableGr.addQuery("sys_id", ci_id);
 		metricTableGr.query();
@@ -1394,12 +1449,18 @@ GrafanaAPIBackend.prototype = {
 		if (sysparam != "")
 			sysparam_query = sysparam;
 		var cis =[];
-		if(alertType=="service")
+		if(alertType=="service") {
+			var isTableAllowed = this.isTableAllowed("em_impact_graph");
+			if (isTableAllowed.allowed == false) {
+				return isTableAllowed.message;
+			}
 			cis = this.getAllCIsInService(ciId);
-		else if (alertType=="ci")
+		} else if (alertType=="ci") {
 			cis = this.getValuesByNameMatch(ciId, "|");
-		else if (alertType=="none")
+		} else if (alertType=="none") {
 			cis=[];
+		}
+		
 		var tagSysparam = "";
 		if (tagFilters != "") {
 			tagSysparam = this.createTagSysparam(tagFilters, 'additional_info');
@@ -1524,15 +1585,9 @@ GrafanaAPIBackend.prototype = {
 			alert.impactedServicesCount = alertGr.getValue('sn_services');
 			alert.impactedServices = "";
 
-			// Check if Script Includes named EvtMgmtAlertsInGroupAPI exists
-			var evtMgmtScriptIncludeExists = false;
-			var siGr = new GlideRecordSecure("sys_script_include");
-			siGr.addQuery("name", "EvtMgmtAlertsInGroupAPI");
-			siGr.addQuery("sys_scope", "global");
-			siGr.query();
-			if (siGr.next()) {
-				evtMgmtScriptIncludeExists = true;
-			}
+			// Check if Event Management Plugin is installed
+			var pluginMgr = new GlidePluginManager();
+			var evtMgmtScriptIncludeExists = pluginMgr.isActive("com.glideapp.itom.snac");
 			
 			if (alert.impactedServicesCount > 0 && evtMgmtScriptIncludeExists == true) {
 				var impactedSysIDs = new global.EvtMgmtAlertsInGroupAPI().getImpactedServicesForAlert(alert.sys_id);
@@ -1541,6 +1596,12 @@ GrafanaAPIBackend.prototype = {
 					endSubstring = impactedSysIDs.length;
 				}
 				var impactedServiceSysIDs = impactedSysIDs.substring(0, endSubstring);
+
+				var isTableAllowed = this.isTableAllowed("cmdb_ci_service");
+				if (isTableAllowed.allowed == false) {
+					return isTableAllowed.message;
+				}
+
 				var serviceGr = new GlideRecordSecure("cmdb_ci_service");
 				serviceGr.addEncodedQuery("sys_idIN" + impactedServiceSysIDs);
 				serviceGr.orderBy("name");
@@ -1975,6 +2036,7 @@ GrafanaAPIBackend.prototype = {
 	},
 	getAllCIsInService: function (serviceId) {
 		var cis = [];
+		var isTableAllowed
         var childrenCIs = new GlideRecordSecure("em_impact_graph");
 		childrenCIs.addQuery("business_service", serviceId);
 		childrenCIs.query();
@@ -2152,13 +2214,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>168</sys_mod_count>
+        <sys_mod_count>183</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2024-04-15 19:34:20</sys_updated_on>
+        <sys_updated_on>2024-04-24 18:30:42</sys_updated_on>
     </sys_script_include>
 </record_update>

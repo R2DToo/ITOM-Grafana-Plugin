@@ -19,17 +19,26 @@
 		typeFilter = request.body.data.targets[0].typeFilter;
 
 	response.setContentType('application/json');
-	if (table != "") {
-		var writer = response.getStreamWriter();
-		response.setStatus(200);
-	
-		var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
-		var columns = metricData.getAllTableColumns(table, search, typeFilter);
-		response.setBody(columns);
-	} else {
+	if (!table) {
 		response.setError(new sn_ws_err.BadRequestError("Table name not provided"));
 	}
-    
+
+	var metricData = new x_opti8_itom_grafa.GrafanaAPIBackend();
+	var sys_db_objectTableAllowed = metricData.isTableAllowed("sys_db_object");
+	var sys_dictionaryTableAllowed = metricData.isTableAllowed("sys_dictionary");
+	var doesTableExist = metricData.doesTableExist(table);
+
+	if (sys_db_objectTableAllowed.allowed == false) {
+		response.setError(new sn_ws_err.BadRequestError(sys_db_objectTableAllowed.message));
+	} else if (sys_dictionaryTableAllowed.allowed == false) {
+		response.setError(new sn_ws_err.BadRequestError(sys_dictionaryTableAllowed.message));
+	} else if (doesTableExist.tableExists == false) {
+		response.setError(new sn_ws_err.BadRequestError("The table requested does not exist"));
+	} else {
+		response.setStatus(200);
+		var columns = metricData.getAllTableColumns(table, search, typeFilter);
+		response.setBody(columns);
+	}
 })(request, response);]]></operation_script>
         <operation_uri>/api/x_opti8_itom_grafa/grafana_api/v1/select/table_columns</operation_uri>
         <produces>application/json,application/xml,text/xml</produces>
@@ -44,14 +53,14 @@
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 20:03:57</sys_created_on>
         <sys_id>f5ddfc721b348990ba4d15c61a4bcbee</sys_id>
-        <sys_mod_count>5</sys_mod_count>
+        <sys_mod_count>7</sys_mod_count>
         <sys_name>V1-Select-Table_Columns</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy/>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_ws_operation_f5ddfc721b348990ba4d15c61a4bcbee</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2023-11-22 20:12:08</sys_updated_on>
+        <sys_updated_on>2024-04-24 17:51:29</sys_updated_on>
         <web_service_definition display_value="Grafana API">e579f07e1bf08990ba4d15c61a4bcb4f</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>
