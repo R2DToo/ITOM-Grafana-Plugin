@@ -16,7 +16,7 @@
         <sys_updated_by>optimiz-grafana</sys_updated_by>
         <sys_updated_on>2024-04-24 19:23:28</sys_updated_on>
         <target_name>sn_occ_log_viewer_parent</target_name>
-        <target_scope display_value="Health Log Analytics">80fae9692b1c0200c5233f74b4da1524</target_scope>
+        <target_scope display_value="">80fae9692b1c0200c5233f74b4da1524</target_scope>
         <target_type>sys_db_object</target_type>
     </sys_scope_privilege>
 </record_update>
