@@ -36,9 +36,9 @@
 	var ci_resourceTableAllowed = metricData.isTableAllowed("ci_resource");
 	if (cmdb_ciTableAllowed.allowed == false) {
 		response.setError(new sn_ws_err.BadRequestError(cmdb_ciTableAllowed.message));
-	} else if (sa_metric_mapTableAllowed) {
+	} else if (sa_metric_mapTableAllowed.allowed == false) {
 		response.setError(new sn_ws_err.BadRequestError(sa_metric_mapTableAllowed.message));
-	} else if (ci_resourceTableAllowed) {
+	} else if (ci_resourceTableAllowed.allowed == false) {
 		response.setError(new sn_ws_err.BadRequestError(ci_resourceTableAllowed.message));
 	} else if (ciId == "") {
 		response.setError(new sn_ws_err.BadRequestError("CI not provided"));
@@ -71,14 +71,14 @@
         <sys_created_by>optimiz</sys_created_by>
         <sys_created_on>2023-11-22 19:19:23</sys_created_on>
         <sys_id>1a3629a787e2b190e7ae55b83cbb350c</sys_id>
-        <sys_mod_count>4</sys_mod_count>
+        <sys_mod_count>5</sys_mod_count>
         <sys_name>V1-Query-Latest_Single_Metric</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy/>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_ws_operation_1a3629a787e2b190e7ae55b83cbb350c</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2024-04-24 16:32:23</sys_updated_on>
+        <sys_updated_on>2024-04-24 19:16:02</sys_updated_on>
         <web_service_definition display_value="Grafana API">e579f07e1bf08990ba4d15c61a4bcb4f</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>
