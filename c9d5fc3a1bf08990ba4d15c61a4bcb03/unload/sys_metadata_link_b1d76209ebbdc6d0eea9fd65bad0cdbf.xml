@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_metadata_link">
+    <sys_metadata_link action="INSERT_OR_UPDATE">
+        <directory>unload</directory>
+        <documentkey>70a7eec5ebbdc6d0eea9fd65bad0cd29</documentkey>
+        <payload><![CDATA[<?xml version="1.0" encoding="UTF-8"?><record_update table="x_opti8_itom_grafa_allowed_tables">
+    <x_opti8_itom_grafa_allowed_tables action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <description/>
+        <sys_created_by>optimiz</sys_created_by>
+        <sys_created_on>2024-04-24 19:04:05</sys_created_on>
+        <sys_id>70a7eec5ebbdc6d0eea9fd65bad0cd29</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>optimiz</sys_updated_by>
+        <sys_updated_on>2024-04-24 19:04:05</sys_updated_on>
+        <table>sn_occ_log_viewer_parent</table>
+    </x_opti8_itom_grafa_allowed_tables>
+</record_update>
+]]></payload>
+        <sys_class_name>sys_metadata_link</sys_class_name>
+        <sys_created_by>optimiz</sys_created_by>
+        <sys_created_on>2024-04-24 19:04:47</sys_created_on>
+        <sys_id>b1d76209ebbdc6d0eea9fd65bad0cdbf</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Created 2024-04-24 15:04:05</sys_name>
+        <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
+        <sys_update_name>sys_metadata_link_b1d76209ebbdc6d0eea9fd65bad0cdbf</sys_update_name>
+        <sys_updated_by>optimiz</sys_updated_by>
+        <sys_updated_on>2024-04-24 19:04:47</sys_updated_on>
+        <tablename>x_opti8_itom_grafa_allowed_tables</tablename>
+    </sys_metadata_link>
+</record_update>
