@@ -719,7 +719,7 @@ GrafanaAPIBackend.prototype = {
 		try {
 			var outageStatus = [];
 			var pageWindow = this.getPageWindow(limit, page);
-			var serviceGr = new GlideRecordSecure("cmdb_ci_service_discovered");
+			var serviceGr = new GlideRecordSecure("cmdb_ci_service");
 			if (ciIds != "")
 				serviceGr.addEncodedQuery("sys_idIN" + ciIds);
 			if (sysparam != "")
@@ -1945,12 +1945,15 @@ GrafanaAPIBackend.prototype = {
 		var outages = {};
 		outages.ci = name;
 		outages.datapoints = [];
+		var breakOut = false;
 		for (var i = 89; i >= 0; i--) {
 			var date = new GlideDateTime(gs.daysAgo(i));
 			var outageGr = new GlideRecordSecure("cmdb_ci_outage");
 			outageGr.addQuery("cmdb_ci", ci);
-			outageGr.addQuery("end", ">=", gs.daysAgoStart(i)).addOrCondition("end", "=", "NULL");
-			outageGr.addQuery("begin", "<=", gs.daysAgoEnd(i));
+			// outageGr.addQuery("end", ">=", gs.daysAgoStart(i)).addOrCondition("end", "=", "NULL");
+			// outageGr.addQuery("begin", "<=", gs.daysAgoEnd(i));
+			outageGr.addEncodedQuery("beginBETWEEN" + gs.daysAgoStart(i) + "@" + gs.daysAgoEnd(i));
+			outageGr.orderBy("begin");
 			outageGr.query();
 
 			if (outageGr.hasNext()) {
@@ -1959,20 +1962,25 @@ GrafanaAPIBackend.prototype = {
 					var end = new GlideDateTime(outageGr.getValue("end"));
 					var type = outageGr.getDisplayValue("type");
 					
-					if (begin) {
+					if (end.getNumericValue() != 0) {
+						// Outage has end date
 						outages.datapoints.push([type, begin.getNumericValue()]);
-						if (end) {
-							outages.datapoints.push(["Operational", end.getNumericValue()]);
-						} else {
-							outages.datapoints.push([type, date.getNumericValue()]);
-						}
-							
-					}
-					
-					if (begin && end)
+						outages.datapoints.push(["Operational", end.getNumericValue()]);
 						actualUptime -= (end.getNumericValue()*0.001) - (begin.getNumericValue()*0.001);
+					} else {
+						// Outage is on-going
+						outages.datapoints.push([type, begin.getNumericValue()]);
+						var today = new GlideDateTime(gs.daysAgo(0));
+						actualUptime -= (today.getNumericValue()*0.001) - (begin.getNumericValue()*0.001);
+						breakOut = true;
+						break;
+					}
+				}
+				if (breakOut == true) {
+					break;
 				}
 			} else {
+				// No outages on this day
 				outages.datapoints.push(["Operational", date.getNumericValue()]);
 			}
 		}
@@ -2214,13 +2222,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>183</sys_mod_count>
+        <sys_mod_count>184</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2024-04-24 18:30:42</sys_updated_on>
+        <sys_updated_on>2024-07-23 15:31:54</sys_updated_on>
     </sys_script_include>
 </record_update>
