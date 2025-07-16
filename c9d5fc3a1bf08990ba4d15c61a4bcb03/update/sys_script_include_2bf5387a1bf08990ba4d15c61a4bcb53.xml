@@ -6,7 +6,9 @@
         <caller_access/>
         <client_callable>false</client_callable>
         <description/>
+        <mobile_callable>false</mobile_callable>
         <name>GrafanaAPIBackend</name>
+        <sandbox_callable>false</sandbox_callable>
         <script><![CDATA[var GrafanaAPIBackend = Class.create();
 GrafanaAPIBackend.prototype = {
     initialize: function() {
@@ -1064,8 +1066,10 @@ GrafanaAPIBackend.prototype = {
 					dataSet.datapoints = [];
 
 					for (var j = 0; j < values.length; j++) {
-						var point = [values[j], timestamp];
-						dataSet.datapoints.push(point);
+						if (isNaN(values[j]) == false) {
+							var point = [values[j], timestamp];
+							dataSet.datapoints.push(point);
+						}
 						timestamp += period;
 					}
 					responseData.push(dataSet);
@@ -1112,11 +1116,7 @@ GrafanaAPIBackend.prototype = {
 					for(var r=0;r<resourceObjs.length;r++)
 					{
 						var metricResponse = this.getLatestSingleMetricObject(ciIds[c], resourceObjs[r].metricName, resourceObjs[r].resourceName, startTime, endTime, sysparam);
-						if (typeof metricResponse == "string") {
-							return metricResponse;
-						} else {
-							responseData.push(metricResponse);
-						}
+						responseData.push(metricResponse);
 					}
 				}
 		}
@@ -1221,9 +1221,7 @@ GrafanaAPIBackend.prototype = {
 					for(var r=0;r<resourceObjs.length;r++)
 					{
 						var metricResponse = this.getSingleMetricObject(ciIds[c], resourceObjs[r].metricName, resourceObjs[r].resourceName, startTime, endTime, sysparam);
-						if (typeof metricResponse == "string") {
-							return metricResponse;
-						} else {
+						if ("error" in metricResponse == false) {
 							responseData.push(metricResponse);
 						}
 					}
@@ -1288,12 +1286,18 @@ GrafanaAPIBackend.prototype = {
 			dataSet.length = values.length;
 			dataSet.values = values;
 			dataSet.datapoints = [];
+
+			dataSet.values = dataSet.values.filter(function (v) {
+				return !isNaN(v);
+			});
 			
 			//dataSet.datapoints.push([0, this.convertSysCreatedStrToMS(startTime)]);
 			
 			for (var j = 0; j < values.length; j++) {
-				var point = [values[j], timestamp];
-				dataSet.datapoints.push(point);
+				if (isNaN(values[j]) == false) {
+					var point = [values[j], timestamp];
+					dataSet.datapoints.push(point);
+				}
 				timestamp += period;
 			}
 			return dataSet;
@@ -1324,14 +1328,13 @@ GrafanaAPIBackend.prototype = {
 						startTime,
 						endTime
 					);
-					if (typeof metricDataObj == "string") {
-						return metricDataObj;
+					if ("error" in metricDataObj == false) {
+						var obj = {};
+						obj.ci_name = metricIds[m].ciName;
+						obj.metric_name = metricIds[m].metricName;
+						obj.data = metricDataObj;
+						returnValues.push(obj);
 					}
-					var obj = {};
-					obj.ci_name = metricIds[m].ciName;
-					obj.metric_name = metricIds[m].metricName;
-					obj.data = metricDataObj;
-					returnValues.push(obj);
 				}
 			}
 
@@ -1361,29 +1364,17 @@ GrafanaAPIBackend.prototype = {
 			//build a transform that returns a simple average
 			var builder = new sn_clotho.Transformer(metricTableGr);
 			builder.metric(metric_name).avg().label("AVG");
-			builder.metric(metric_name).max().label("MAX");
-			builder.metric(metric_name).min().label("MIN");
 
 			//execute transform and return result for visualization
 			var result = builder.execute(start_time, end_time);
 			
 			var avgData = result.getByLabel("AVG");
-			var maxData = result.getByLabel("MAX");
-			var minData = result.getByLabel("MIN");
 			
-			if (!avgData || !maxData || !minData) {
+			if (!avgData) {
 				dataSet.length = 0;
 				dataSet.series = [
 					{
 						type: "AVG",
-						data: []
-					},
-					{
-						type: "MAX",
-						data: []
-					},
-					{
-						type: "MIN",
 						data: []
 					}
 				];
@@ -1394,8 +1385,6 @@ GrafanaAPIBackend.prototype = {
 				}
 				while (start_time <= end_time) {
 					dataSet.series[0].data.push({time: this.convertSysCreatedStrToMS(start_time), value: 0});
-					dataSet.series[1].data.push({time: this.convertSysCreatedStrToMS(start_time), value: 0});
-					dataSet.series[2].data.push({time: this.convertSysCreatedStrToMS(start_time), value: 0});
 					start_time.addSeconds(intervalInSeconds);
 				}*/
 				return dataSet;
@@ -1405,34 +1394,20 @@ GrafanaAPIBackend.prototype = {
 			var period = avgData.getPeriod() * 1000;
 			
 			var avgValues = avgData.getValues();
-			var maxValues = maxData.getValues();
-			var minValues = minData.getValues();
 			
 			dataSet.length = avgValues.length;
 			dataSet.series = [
 				{
 					type: "AVG",
 					data: []
-				},
-				{
-					type: "MAX",
-					data: []
-				},
-				{
-					type: "MIN",
-					data: []
 				}
 			];
 			
 			for (var j = 0; j < dataSet.length; j++) {
-				var avgDataPoint = {time: timestamp, value: avgValues[j]};
-				var maxDataPoint = {time: timestamp, value: maxValues[j]};
-				var minDataPoint = {time: timestamp, value: minValues[j]};
-				
-				dataSet.series[0].data.push(avgDataPoint);
-				dataSet.series[1].data.push(maxDataPoint);
-				dataSet.series[2].data.push(minDataPoint);
-				
+				if (isNaN(avgValues[j]) == false) {
+					var avgDataPoint = {time: timestamp, value: avgValues[j]};
+					dataSet.series[0].data.push(avgDataPoint);
+				}
 				timestamp += period;
 			}
 			
@@ -2044,7 +2019,6 @@ GrafanaAPIBackend.prototype = {
 	},
 	getAllCIsInService: function (serviceId) {
 		var cis = [];
-		var isTableAllowed
         var childrenCIs = new GlideRecordSecure("em_impact_graph");
 		childrenCIs.addQuery("business_service", serviceId);
 		childrenCIs.query();
@@ -2222,13 +2196,13 @@ GrafanaAPIBackend.prototype = {
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:30:47</sys_created_on>
         <sys_id>2bf5387a1bf08990ba4d15c61a4bcb53</sys_id>
-        <sys_mod_count>184</sys_mod_count>
+        <sys_mod_count>186</sys_mod_count>
         <sys_name>GrafanaAPIBackend</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
         <sys_update_name>sys_script_include_2bf5387a1bf08990ba4d15c61a4bcb53</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2024-07-23 15:31:54</sys_updated_on>
+        <sys_updated_on>2025-07-16 19:09:56</sys_updated_on>
     </sys_script_include>
 </record_update>
