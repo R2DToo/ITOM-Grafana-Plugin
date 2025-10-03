@@ -3,7 +3,10 @@
         <active>true</active>
         <admin_overrides>true</admin_overrides>
         <advanced>false</advanced>
+        <applies_to/>
         <condition/>
+        <controlled_by_refs/>
+        <decision_type>allow</decision_type>
         <description>This rule is to prevent users who do not have the itil role from querying the Scripted REST API's added with the ITOM Grafana Plugin application.</description>
         <local_or_existing/>
         <name>ITOM Grafana Plugin Scripted REST API</name>

@@ -12,13 +12,13 @@
         <sys_class_name>ua_table_licensing_config</sys_class_name>
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2024-04-23 19:54:42</sys_created_on>
-        <sys_id>dfa9e1bc47b98a1019b2d92f016d4312</sys_id>
+        <sys_id>eb5f50f193638290d26539c74dba1095</sys_id>
         <sys_mod_count>0</sys_mod_count>
         <sys_name>x_opti8_itom_grafa_allowed_tables</sys_name>
         <sys_package display_value="ITOM Grafana Plugin" source="x_opti8_itom_grafa">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_package>
         <sys_policy/>
         <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
-        <sys_update_name>ua_table_licensing_config_dfa9e1bc47b98a1019b2d92f016d4312</sys_update_name>
+        <sys_update_name>ua_table_licensing_config_eb5f50f193638290d26539c74dba1095</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
         <sys_updated_on>2024-04-23 19:54:42</sys_updated_on>
     </ua_table_licensing_config>

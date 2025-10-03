@@ -17,6 +17,7 @@
         <override_menu_roles>false</override_menu_roles>
         <query>https://www.optimiz.ca/application-support/</query>
         <report/>
+        <require_confirmation>true</require_confirmation>
         <roles/>
         <sys_class_name>sys_app_module</sys_class_name>
         <sys_created_by>optimiz</sys_created_by>

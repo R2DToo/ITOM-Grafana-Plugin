@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_security_acl_role">
+    <sys_security_acl_role action="DELETE">
+        <sys_class_name>sys_security_acl_role</sys_class_name>
+        <sys_created_by>@@snc_write_audit@@</sys_created_by>
+        <sys_created_on>2025-05-12 21:11:08</sys_created_on>
+        <sys_id>bc91c2a5f334621048dff3d888350858</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name/>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
+        <sys_security_acl display_value="x_opti8_itom_grafa_allowed_tables">bc91c2a5f334621048dff3d499273015</sys_security_acl>
+        <sys_update_name>sys_security_acl_role_bc91c2a5f334621048dff3d888350858</sys_update_name>
+        <sys_updated_by>@@snc_write_audit@@</sys_updated_by>
+        <sys_updated_on>2025-05-12 21:11:08</sys_updated_on>
+        <sys_user_role display_value="public" name="public">b0593b350a0a0aa7001d689e4542dc28</sys_user_role>
+    </sys_security_acl_role>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</application>
+        <file_path/>
+        <instance_id>7638d5fddbbc5dd407072f17d49619e5</instance_id>
+        <instance_name>ven05528</instance_name>
+        <name>sys_security_acl_role_bc91c2a5f334621048dff3d888350858</name>
+        <payload><![CDATA[<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_security_acl_role"><sys_security_acl_role action="INSERT_OR_UPDATE"><sys_class_name>sys_security_acl_role</sys_class_name><sys_created_by>@@snc_write_audit@@</sys_created_by><sys_created_on>2025-05-12 21:11:08</sys_created_on><sys_id>bc91c2a5f334621048dff3d888350858</sys_id><sys_mod_count>0</sys_mod_count><sys_name/><sys_package display_value="Global" source="global">global</sys_package><sys_policy/><sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope><sys_security_acl display_value="x_opti8_itom_grafa_allowed_tables">bc91c2a5f334621048dff3d499273015</sys_security_acl><sys_update_name>sys_security_acl_role_bc91c2a5f334621048dff3d888350858</sys_update_name><sys_updated_by>@@snc_write_audit@@</sys_updated_by><sys_updated_on>2025-05-12 21:11:08</sys_updated_on><sys_user_role display_value="public" name="public">b0593b350a0a0aa7001d689e4542dc28</sys_user_role></sys_security_acl_role></record_update>]]></payload>
+        <payload_hash>1236274682</payload_hash>
+        <record_name/>
+        <reverted_from/>
+        <source>2001c40293332210d26539c74dba1046</source>
+        <source_table>sys_upgrade_history</source_table>
+        <state>previous</state>
+        <sys_created_by/>
+        <sys_created_on>2025-09-06 11:57:42</sys_created_on>
+        <sys_id>54b109369314fa10d26539c74dba1088</sys_id>
+        <sys_mod_count/>
+        <sys_recorded_at>1991ee3aef00000000</sys_recorded_at>
+        <sys_updated_by/>
+        <sys_updated_on/>
+        <type>Access Roles</type>
+        <update_guid>14b109361e14fa101b0d48cd4f94aa88</update_guid>
+        <update_guid_history>14b109361e14fa101b0d48cd4f94aa88:1236274682</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete display_value="">5cb109369314fa10d26539c74dba1088</sys_audit_delete>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>@@snc_write_audit@@</sys_created_by>
+        <sys_created_on>2025-10-03 21:07:08</sys_created_on>
+        <sys_db_object display_value="" name="sys_security_acl_role">sys_security_acl_role</sys_db_object>
+        <sys_id>33a965c89e214463968eec6fb177a441</sys_id>
+        <sys_metadata>bc91c2a5f334621048dff3d888350858</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name/>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_parent display_value="x_opti8_itom_grafa_allowed_tables">bc91c2a5f334621048dff3d499273015</sys_parent>
+        <sys_policy/>
+        <sys_scope display_value="ITOM Grafana Plugin">c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_scope>
+        <sys_scope_delete display_value="">137fc854700141a29597d887089a3a29</sys_scope_delete>
+        <sys_update_name>sys_security_acl_role_bc91c2a5f334621048dff3d888350858</sys_update_name>
+        <sys_update_version display_value="sys_security_acl_role_bc91c2a5f334621048dff3d888350858">54b109369314fa10d26539c74dba1088</sys_update_version>
+        <sys_updated_by>@@snc_write_audit@@</sys_updated_by>
+        <sys_updated_on>2025-10-03 21:07:08</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>
