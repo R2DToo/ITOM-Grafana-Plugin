@@ -16,6 +16,7 @@
         <logo>17eb701a87e5ce10b9b28b9acebb35d3</logo>
         <menu display_value="ITOM Grafana Plugin">80e98e8e47be615035b92422736d4365</menu>
         <name>ITOM Grafana Plugin</name>
+        <package_json/>
         <private>false</private>
         <restrict_table_access>false</restrict_table_access>
         <runtime_access_tracking>permissive</runtime_access_tracking>
@@ -31,16 +32,16 @@
         <sys_created_by>bstill-routley</sys_created_by>
         <sys_created_on>2022-01-05 19:28:38</sys_created_on>
         <sys_id>c9d5fc3a1bf08990ba4d15c61a4bcb03</sys_id>
-        <sys_mod_count>36</sys_mod_count>
+        <sys_mod_count>37</sys_mod_count>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2024-05-06 18:37:16</sys_updated_on>
+        <sys_updated_on>2025-10-03 20:46:04</sys_updated_on>
         <template/>
         <trackable>true</trackable>
         <uninstall_blocked>false</uninstall_blocked>
         <user_role display_value="itil" name="itil">282bf1fac6112285017366cb5f867469</user_role>
         <vendor/>
         <vendor_prefix/>
-        <version>1.8.0</version>
+        <version>1.8.2</version>
     </sys_app>
     <sys_attachment action="INSERT_OR_UPDATE">
         <average_image_color>#604437</average_image_color>
